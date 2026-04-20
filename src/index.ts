@@ -67,7 +67,10 @@ const DEFAULT_OPTIONS: Required<
 };
 
 function normalizeModelsURL(baseURL: string): string {
-  const clean = baseURL.replace(/\/+$/, "");
+  let clean = baseURL;
+  while (clean.endsWith("/")) {
+    clean = clean.slice(0, -1);
+  }
   return clean.endsWith("/v1") ? `${clean}/models` : `${clean}/v1/models`;
 }
 
