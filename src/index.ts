@@ -132,6 +132,28 @@ type ModelsDevCache = {
 
 let modelsDevCache: ModelsDevCache | undefined;
 
+const PROVIDER_ALIAS_TO_NAME: Record<string, string> = {
+  myopenai: "OpenAI",
+  openai: "OpenAI",
+  cx: "Codex",
+  codex: "Codex",
+  cc: "Claude",
+  claude: "Claude",
+  gc: "Gemini",
+  gemini: "Gemini",
+  google: "Google",
+  qw: "Qwen",
+  qwen: "Qwen",
+  gl: "GitHub Copilot",
+  github: "GitHub Copilot",
+  "github-copilot": "GitHub Copilot",
+  op: "OpenCode",
+  opencode: "OpenCode",
+  if: "IFlow",
+  iflow: "IFlow",
+  iflowcn: "IFlow"
+};
+
 function normalizeModelsURL(baseURL: string): string {
   let clean = baseURL;
   while (clean.endsWith("/")) {
@@ -176,8 +198,46 @@ function inferFamily(modelId: string): string {
   return fallback || "unknown";
 }
 
+function toDisplayProviderName(providerAlias: string): string {
+  const normalized = canonicalVariant(providerAlias);
+  if (!normalized) {
+    return "Unknown";
+  }
+
+  const mapped = PROVIDER_ALIAS_TO_NAME[normalized];
+  if (mapped) {
+    return mapped;
+  }
+
+  return normalized
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function splitProviderAndModelId(modelId: string): { providerAlias?: string; modelLabel: string } {
+  const trimmed = modelId.trim();
+  if (!trimmed) {
+    return { modelLabel: modelId };
+  }
+
+  for (const separator of ["/", ":"]) {
+    const idx = trimmed.indexOf(separator);
+    if (idx > 0 && idx < trimmed.length - 1) {
+      return {
+        providerAlias: trimmed.slice(0, idx),
+        modelLabel: trimmed.slice(idx + 1)
+      };
+    }
+  }
+
+  return { modelLabel: trimmed };
+}
+
 function toOpenCodeModel(
   upstream: UpstreamModel,
+  providerId: string,
   contextWindow: number,
   maxOutputTokens: number,
   enriched?: ModelsDevModel
@@ -200,11 +260,16 @@ function toOpenCodeModel(
     typeof enrichedOutput === "number" && Number.isFinite(enrichedOutput) && enrichedOutput > 0
       ? enrichedOutput
       : maxOutputTokens;
+  const parsedId = splitProviderAndModelId(upstream.id);
+  const providerLabel = toDisplayProviderName(parsedId.providerAlias ?? providerId);
+  const modelLabel =
+    typeof enriched?.name === "string" && enriched.name.trim()
+      ? enriched.name.trim()
+      : parsedId.modelLabel || upstream.id;
 
   return {
     id: upstream.id,
-    name:
-      typeof enriched?.name === "string" && enriched.name.trim() ? enriched.name : upstream.id,
+    name: `${providerLabel} - ${modelLabel}`,
     family,
     release_date: releaseDate,
     attachment: typeof enriched?.attachment === "boolean" ? enriched.attachment : false,
@@ -553,6 +618,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             const enriched = findEnrichedModel(model.id, modelsDevLookup);
             acc[model.id] = toOpenCodeModel(
               model,
+              providerId,
               defaultContextWindow,
               defaultMaxOutputTokens,
               enriched

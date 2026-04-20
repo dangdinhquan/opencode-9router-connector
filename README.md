@@ -2,7 +2,7 @@
 
 A production-ready OpenCode plugin that auto-connects to any OpenAI-compatible API and auto-discovers available models from `GET /v1/models`.
 
-The plugin maps discovered models into OpenCode `provider.models` format, enriches capability/token metadata from `https://models.dev/api.json`, supports include/exclude filtering by model ID, and safely falls back to static models when discovery cannot run.
+The plugin maps discovered models into OpenCode `provider.models` format, auto-names them as `Provider - Model`, enriches capability/token metadata from `https://models.dev/api.json`, supports include/exclude filtering by model ID, and safely falls back to static models when discovery cannot run.
 
 ## Installation
 
