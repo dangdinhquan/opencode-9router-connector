@@ -10,6 +10,21 @@ The plugin maps discovered models into OpenCode `provider.models` format, enrich
 npm install opencode-9router-plugin
 ```
 
+## Publish to npm (GitHub Actions)
+
+This repository includes a workflow at:
+
+- `.github/workflows/publish-npm.yml`
+
+The workflow publishes to npm when:
+
+- a GitHub Release is published, or
+- triggered manually via `workflow_dispatch`.
+
+Required repository secret:
+
+- `NPM_TOKEN`: npm automation token with publish permission for `opencode-9router-plugin`.
+
 ## Environment variables
 
 Create a `.env` file from `.env.example`:
