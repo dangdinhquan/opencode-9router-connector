@@ -18,7 +18,7 @@ This repository includes a workflow at:
 
 The workflow publishes to npm when:
 
-- a GitHub Release is published, or
+- a Git tag matching `v*` is pushed (for example `v1.0.0`), or
 - triggered manually via `workflow_dispatch`.
 
 Required repository secret:
