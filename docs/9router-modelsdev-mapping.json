@@ -1,0 +1,5464 @@
+{
+  "generatedAt": "2026-04-20T01:14:30.049Z",
+  "sourceRefs": {
+    "nineRouter": {
+      "repo": "https://github.com/decolua/9router",
+      "commit": "befb2bc3d5533eebce6a49487faab2df7758860e",
+      "configPaths": [
+        {
+          "path": "open-sse/config/providerModels.js",
+          "purpose": "Static provider models + PROVIDER_ID_TO_ALIAS + OAUTH_ALIASES",
+          "url": "https://github.com/decolua/9router/blob/befb2bc3d5533eebce6a49487faab2df7758860e/open-sse/config/providerModels.js"
+        },
+        {
+          "path": "src/shared/constants/providers.js",
+          "purpose": "Provider IDs, aliases, and compatible-provider prefixes",
+          "url": "https://github.com/decolua/9router/blob/befb2bc3d5533eebce6a49487faab2df7758860e/src/shared/constants/providers.js"
+        },
+        {
+          "path": "src/app/api/provider-nodes/route.js",
+          "purpose": "User-defined prefix for openai-compatible / anthropic-compatible nodes",
+          "url": "https://github.com/decolua/9router/blob/befb2bc3d5533eebce6a49487faab2df7758860e/src/app/api/provider-nodes/route.js"
+        },
+        {
+          "path": "src/app/api/providers/route.js",
+          "purpose": "Persist providerSpecificData.prefix from provider node into connection",
+          "url": "https://github.com/decolua/9router/blob/befb2bc3d5533eebce6a49487faab2df7758860e/src/app/api/providers/route.js"
+        },
+        {
+          "path": "src/app/api/v1/models/route.js",
+          "purpose": "Output /v1/models IDs as <outputAlias>/<modelId>",
+          "url": "https://github.com/decolua/9router/blob/befb2bc3d5533eebce6a49487faab2df7758860e/src/app/api/v1/models/route.js"
+        }
+      ]
+    },
+    "modelsDev": {
+      "repo": "https://github.com/anomalyco/models.dev",
+      "branch": "dev",
+      "source": "providers/*/models/**/*.toml",
+      "lookupCount": 4217
+    }
+  },
+  "prefixRules": {
+    "emittedModelIdFormat": "<prefix>/<modelId>",
+    "prefixResolutionOrder": [
+      "connection.providerSpecificData.prefix (for compatible providers)",
+      "getProviderAlias(providerId) from src/shared/constants/providers.js",
+      "static alias from PROVIDER_ID_TO_ALIAS / provider key"
+    ],
+    "notes": [
+      "OpenAI-compatible and Anthropic-compatible nodes allow custom prefix; this is where values like cx/gpt-5.4 can appear.",
+      "If upstream /models already returns prefixed IDs, 9router strips recognized prefix then re-emits with outputAlias."
+    ]
+  },
+  "providerSummary": {
+    "cc": {
+      "inferredProviderId": "claude",
+      "preferredModelsDevProviders": [
+        "anthropic",
+        "cc"
+      ],
+      "total": 6,
+      "matched": 6,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "anthropic",
+          "count": 6
+        }
+      ]
+    },
+    "cx": {
+      "inferredProviderId": "codex",
+      "preferredModelsDevProviders": [
+        "openai",
+        "github-copilot",
+        "codex",
+        "cx"
+      ],
+      "total": 16,
+      "matched": 11,
+      "ambiguous": 0,
+      "unmatched": 5,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "openai",
+          "count": 10
+        },
+        {
+          "provider": "abacus",
+          "count": 1
+        }
+      ]
+    },
+    "gc": {
+      "inferredProviderId": "gemini-cli",
+      "preferredModelsDevProviders": [
+        "google",
+        "gc"
+      ],
+      "total": 2,
+      "matched": 2,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "google",
+          "count": 2
+        }
+      ]
+    },
+    "qw": {
+      "inferredProviderId": "qwen",
+      "preferredModelsDevProviders": [
+        "qwen",
+        "alibaba",
+        "dashscope",
+        "qw"
+      ],
+      "total": 5,
+      "matched": 2,
+      "ambiguous": 1,
+      "unmatched": 2,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "alibaba",
+          "count": 2
+        }
+      ]
+    },
+    "if": {
+      "inferredProviderId": "iflow",
+      "preferredModelsDevProviders": [
+        "iflowcn",
+        "iflow",
+        "if"
+      ],
+      "total": 15,
+      "matched": 12,
+      "ambiguous": 2,
+      "unmatched": 1,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "iflowcn",
+          "count": 12
+        }
+      ]
+    },
+    "ag": {
+      "inferredProviderId": "antigravity",
+      "preferredModelsDevProviders": [
+        "antigravity",
+        "opencode",
+        "openai",
+        "google",
+        "anthropic",
+        "ag"
+      ],
+      "total": 6,
+      "matched": 2,
+      "ambiguous": 0,
+      "unmatched": 4,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "opencode",
+          "count": 2
+        }
+      ]
+    },
+    "gh": {
+      "inferredProviderId": "github",
+      "preferredModelsDevProviders": [
+        "github-copilot",
+        "openai",
+        "anthropic",
+        "google",
+        "xai",
+        "gh"
+      ],
+      "total": 28,
+      "matched": 26,
+      "ambiguous": 0,
+      "unmatched": 2,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "github-copilot",
+          "count": 22
+        },
+        {
+          "provider": "openai",
+          "count": 4
+        }
+      ]
+    },
+    "kr": {
+      "inferredProviderId": "kiro",
+      "preferredModelsDevProviders": [
+        "kiro",
+        "github-copilot",
+        "anthropic",
+        "openai",
+        "kr"
+      ],
+      "total": 8,
+      "matched": 3,
+      "ambiguous": 3,
+      "unmatched": 2,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "github-copilot",
+          "count": 3
+        }
+      ]
+    },
+    "cu": {
+      "inferredProviderId": "cursor",
+      "preferredModelsDevProviders": [
+        "cursor",
+        "openai",
+        "anthropic",
+        "google",
+        "moonshot",
+        "cu"
+      ],
+      "total": 14,
+      "matched": 4,
+      "ambiguous": 4,
+      "unmatched": 6,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "openai",
+          "count": 3
+        },
+        {
+          "provider": "google",
+          "count": 1
+        }
+      ]
+    },
+    "kmc": {
+      "inferredProviderId": "kmc",
+      "preferredModelsDevProviders": [
+        "moonshot",
+        "kimi",
+        "kmc"
+      ],
+      "total": 3,
+      "matched": 0,
+      "ambiguous": 1,
+      "unmatched": 2,
+      "inferredModelsDevProviders": []
+    },
+    "kc": {
+      "inferredProviderId": "kilocode",
+      "preferredModelsDevProviders": [
+        "anthropic",
+        "google",
+        "openai",
+        "deepseek",
+        "kc"
+      ],
+      "total": 8,
+      "matched": 8,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "anthropic",
+          "count": 2
+        },
+        {
+          "provider": "google",
+          "count": 2
+        },
+        {
+          "provider": "openai",
+          "count": 2
+        },
+        {
+          "provider": "deepseek",
+          "count": 2
+        }
+      ]
+    },
+    "oc": {
+      "inferredProviderId": "opencode",
+      "preferredModelsDevProviders": [
+        "opencode",
+        "oc"
+      ],
+      "total": 5,
+      "matched": 5,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "opencode",
+          "count": 5
+        }
+      ]
+    },
+    "cl": {
+      "inferredProviderId": "cline",
+      "preferredModelsDevProviders": [
+        "cline",
+        "anthropic",
+        "openai",
+        "google",
+        "cl"
+      ],
+      "total": 8,
+      "matched": 5,
+      "ambiguous": 3,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "openai",
+          "count": 2
+        },
+        {
+          "provider": "google",
+          "count": 2
+        },
+        {
+          "provider": "novita-ai",
+          "count": 1
+        }
+      ]
+    },
+    "openai": {
+      "inferredProviderId": "openai",
+      "preferredModelsDevProviders": [
+        "openai",
+        "openai"
+      ],
+      "total": 26,
+      "matched": 23,
+      "ambiguous": 0,
+      "unmatched": 3,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "openai",
+          "count": 23
+        }
+      ]
+    },
+    "anthropic": {
+      "inferredProviderId": "anthropic",
+      "preferredModelsDevProviders": [
+        "anthropic",
+        "anthropic"
+      ],
+      "total": 3,
+      "matched": 3,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "anthropic",
+          "count": 3
+        }
+      ]
+    },
+    "gemini": {
+      "inferredProviderId": "gemini",
+      "preferredModelsDevProviders": [
+        "google",
+        "gemini"
+      ],
+      "total": 14,
+      "matched": 11,
+      "ambiguous": 0,
+      "unmatched": 3,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "google",
+          "count": 11
+        }
+      ]
+    },
+    "openrouter": {
+      "inferredProviderId": "openrouter",
+      "preferredModelsDevProviders": [
+        "openrouter",
+        "openrouter"
+      ],
+      "total": 10,
+      "matched": 3,
+      "ambiguous": 1,
+      "unmatched": 6,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "openai",
+          "count": 3
+        }
+      ]
+    },
+    "glm": {
+      "inferredProviderId": "glm",
+      "preferredModelsDevProviders": [
+        "glm",
+        "glm"
+      ],
+      "total": 4,
+      "matched": 0,
+      "ambiguous": 4,
+      "unmatched": 0,
+      "inferredModelsDevProviders": []
+    },
+    "glm-cn": {
+      "inferredProviderId": "glm-cn",
+      "preferredModelsDevProviders": [
+        "glm",
+        "glm-cn"
+      ],
+      "total": 5,
+      "matched": 0,
+      "ambiguous": 5,
+      "unmatched": 0,
+      "inferredModelsDevProviders": []
+    },
+    "kimi": {
+      "inferredProviderId": "kimi",
+      "preferredModelsDevProviders": [
+        "moonshot",
+        "kimi",
+        "kimi"
+      ],
+      "total": 3,
+      "matched": 0,
+      "ambiguous": 1,
+      "unmatched": 2,
+      "inferredModelsDevProviders": []
+    },
+    "minimax": {
+      "inferredProviderId": "minimax",
+      "preferredModelsDevProviders": [
+        "minimax",
+        "minimax"
+      ],
+      "total": 3,
+      "matched": 3,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "minimax",
+          "count": 3
+        }
+      ]
+    },
+    "blackbox": {
+      "inferredProviderId": "blackbox",
+      "preferredModelsDevProviders": [
+        "blackbox",
+        "openai",
+        "anthropic",
+        "google",
+        "deepseek",
+        "blackbox"
+      ],
+      "total": 17,
+      "matched": 12,
+      "ambiguous": 4,
+      "unmatched": 1,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "openai",
+          "count": 4
+        },
+        {
+          "provider": "github-copilot",
+          "count": 3
+        },
+        {
+          "provider": "anthropic",
+          "count": 2
+        },
+        {
+          "provider": "google",
+          "count": 2
+        },
+        {
+          "provider": "deepseek",
+          "count": 1
+        }
+      ]
+    },
+    "minimax-cn": {
+      "inferredProviderId": "minimax-cn",
+      "preferredModelsDevProviders": [
+        "minimax",
+        "minimax-cn"
+      ],
+      "total": 3,
+      "matched": 3,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "minimax",
+          "count": 3
+        }
+      ]
+    },
+    "alicode": {
+      "inferredProviderId": "alicode",
+      "preferredModelsDevProviders": [
+        "alibaba",
+        "dashscope",
+        "alicode"
+      ],
+      "total": 8,
+      "matched": 2,
+      "ambiguous": 6,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "alibaba",
+          "count": 2
+        }
+      ]
+    },
+    "alicode-intl": {
+      "inferredProviderId": "alicode-intl",
+      "preferredModelsDevProviders": [
+        "alibaba",
+        "dashscope",
+        "alicode-intl"
+      ],
+      "total": 7,
+      "matched": 2,
+      "ambiguous": 5,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "alibaba",
+          "count": 2
+        }
+      ]
+    },
+    "deepseek": {
+      "inferredProviderId": "deepseek",
+      "preferredModelsDevProviders": [
+        "deepseek",
+        "deepseek"
+      ],
+      "total": 2,
+      "matched": 2,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "deepseek",
+          "count": 2
+        }
+      ]
+    },
+    "groq": {
+      "inferredProviderId": "groq",
+      "preferredModelsDevProviders": [
+        "groq",
+        "groq"
+      ],
+      "total": 4,
+      "matched": 4,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "groq",
+          "count": 4
+        }
+      ]
+    },
+    "xai": {
+      "inferredProviderId": "xai",
+      "preferredModelsDevProviders": [
+        "xai",
+        "xai"
+      ],
+      "total": 4,
+      "matched": 3,
+      "ambiguous": 1,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "xai",
+          "count": 3
+        }
+      ]
+    },
+    "mistral": {
+      "inferredProviderId": "mistral",
+      "preferredModelsDevProviders": [
+        "mistral",
+        "mistral"
+      ],
+      "total": 3,
+      "matched": 3,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "mistral",
+          "count": 3
+        }
+      ]
+    },
+    "perplexity": {
+      "inferredProviderId": "perplexity",
+      "preferredModelsDevProviders": [
+        "perplexity",
+        "perplexity"
+      ],
+      "total": 2,
+      "matched": 2,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "perplexity",
+          "count": 2
+        }
+      ]
+    },
+    "together": {
+      "inferredProviderId": "together",
+      "preferredModelsDevProviders": [
+        "together",
+        "together"
+      ],
+      "total": 4,
+      "matched": 0,
+      "ambiguous": 4,
+      "unmatched": 0,
+      "inferredModelsDevProviders": []
+    },
+    "fireworks": {
+      "inferredProviderId": "fireworks",
+      "preferredModelsDevProviders": [
+        "fireworks-ai",
+        "fireworks",
+        "fireworks"
+      ],
+      "total": 3,
+      "matched": 1,
+      "ambiguous": 0,
+      "unmatched": 2,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "fireworks-ai",
+          "count": 1
+        }
+      ]
+    },
+    "cerebras": {
+      "inferredProviderId": "cerebras",
+      "preferredModelsDevProviders": [
+        "cerebras",
+        "cerebras"
+      ],
+      "total": 6,
+      "matched": 4,
+      "ambiguous": 1,
+      "unmatched": 1,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "cerebras",
+          "count": 3
+        },
+        {
+          "provider": "venice",
+          "count": 1
+        }
+      ]
+    },
+    "cohere": {
+      "inferredProviderId": "cohere",
+      "preferredModelsDevProviders": [
+        "cohere",
+        "cohere"
+      ],
+      "total": 3,
+      "matched": 3,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "cohere",
+          "count": 3
+        }
+      ]
+    },
+    "nvidia": {
+      "inferredProviderId": "nvidia",
+      "preferredModelsDevProviders": [
+        "nvidia",
+        "nvidia"
+      ],
+      "total": 2,
+      "matched": 2,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "moonshotai",
+          "count": 1
+        },
+        {
+          "provider": "nvidia",
+          "count": 1
+        }
+      ]
+    },
+    "nebius": {
+      "inferredProviderId": "nebius",
+      "preferredModelsDevProviders": [
+        "nebius",
+        "nebius"
+      ],
+      "total": 1,
+      "matched": 1,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "nebius",
+          "count": 1
+        }
+      ]
+    },
+    "siliconflow": {
+      "inferredProviderId": "siliconflow",
+      "preferredModelsDevProviders": [
+        "siliconflow",
+        "siliconflow"
+      ],
+      "total": 10,
+      "matched": 10,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "siliconflow",
+          "count": 9
+        },
+        {
+          "provider": "moonshotai",
+          "count": 1
+        }
+      ]
+    },
+    "hyperbolic": {
+      "inferredProviderId": "hyperbolic",
+      "preferredModelsDevProviders": [
+        "hyperbolic",
+        "hyperbolic"
+      ],
+      "total": 8,
+      "matched": 1,
+      "ambiguous": 7,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "kilo",
+          "count": 1
+        }
+      ]
+    },
+    "ollama": {
+      "inferredProviderId": "ollama",
+      "preferredModelsDevProviders": [
+        "ollama",
+        "ollama"
+      ],
+      "total": 6,
+      "matched": 1,
+      "ambiguous": 4,
+      "unmatched": 1,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "ollama-cloud",
+          "count": 1
+        }
+      ]
+    },
+    "vertex": {
+      "inferredProviderId": "vertex",
+      "preferredModelsDevProviders": [
+        "google",
+        "vertex",
+        "vertex"
+      ],
+      "total": 4,
+      "matched": 4,
+      "ambiguous": 0,
+      "unmatched": 0,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "google",
+          "count": 4
+        }
+      ]
+    },
+    "vertex-partner": {
+      "inferredProviderId": "vertex-partner",
+      "preferredModelsDevProviders": [
+        "google",
+        "vertex",
+        "vertex-partner"
+      ],
+      "total": 4,
+      "matched": 2,
+      "ambiguous": 0,
+      "unmatched": 2,
+      "inferredModelsDevProviders": [
+        {
+          "provider": "google-vertex",
+          "count": 2
+        }
+      ]
+    }
+  },
+  "providerMappings": [
+    {
+      "providerPrefix": "cc",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "claude"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "cc/claude-opus-4-7",
+          "modelId": "claude-opus-4-7",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "anthropic/claude-opus-4-7",
+          "candidates": [
+            "anthropic/claude-opus-4-7",
+            "firmware/claude-opus-4-7",
+            "llmgateway/claude-opus-4-7",
+            "opencode/claude-opus-4-7",
+            "venice/claude-opus-4-7"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cc/claude-opus-4-6",
+          "modelId": "claude-opus-4-6",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "anthropic/claude-opus-4-6",
+          "candidates": [
+            "abacus/claude-opus-4-6",
+            "aihubmix/claude-opus-4-6",
+            "anthropic/claude-opus-4-6",
+            "azure-cognitive-services/claude-opus-4-6",
+            "azure/claude-opus-4-6",
+            "firmware/claude-opus-4-6",
+            "jiekou/claude-opus-4-6",
+            "llmgateway/claude-opus-4-6",
+            "opencode/claude-opus-4-6",
+            "venice/claude-opus-4-6"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cc/claude-sonnet-4-6",
+          "modelId": "claude-sonnet-4-6",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "anthropic/claude-sonnet-4-6",
+          "candidates": [
+            "abacus/claude-sonnet-4-6",
+            "aihubmix/claude-sonnet-4-6",
+            "anthropic/claude-sonnet-4-6",
+            "firmware/claude-sonnet-4-6",
+            "llmgateway/claude-sonnet-4-6",
+            "opencode/claude-sonnet-4-6",
+            "venice/claude-sonnet-4-6"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cc/claude-opus-4-5-20251101",
+          "modelId": "claude-opus-4-5-20251101",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "anthropic/claude-opus-4-5-20251101",
+          "candidates": [
+            "302ai/claude-opus-4-5-20251101",
+            "abacus/claude-opus-4-5-20251101",
+            "anthropic/claude-opus-4-5-20251101",
+            "jiekou/claude-opus-4-5-20251101",
+            "llmgateway/claude-opus-4-5-20251101",
+            "nano-gpt/claude-opus-4-5-20251101",
+            "qihang-ai/claude-opus-4-5-20251101"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cc/claude-sonnet-4-5-20250929",
+          "modelId": "claude-sonnet-4-5-20250929",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "anthropic/claude-sonnet-4-5-20250929",
+          "candidates": [
+            "302ai/claude-sonnet-4-5-20250929",
+            "abacus/claude-sonnet-4-5-20250929",
+            "anthropic/claude-sonnet-4-5-20250929",
+            "helicone/claude-sonnet-4-5-20250929",
+            "jiekou/claude-sonnet-4-5-20250929",
+            "llmgateway/claude-sonnet-4-5-20250929",
+            "nano-gpt/claude-sonnet-4-5-20250929",
+            "qihang-ai/claude-sonnet-4-5-20250929"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cc/claude-haiku-4-5-20251001",
+          "modelId": "claude-haiku-4-5-20251001",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "anthropic/claude-haiku-4-5-20251001",
+          "candidates": [
+            "302ai/claude-haiku-4-5-20251001",
+            "abacus/claude-haiku-4-5-20251001",
+            "anthropic/claude-haiku-4-5-20251001",
+            "helicone/claude-haiku-4-5-20251001",
+            "jiekou/claude-haiku-4-5-20251001",
+            "llmgateway/claude-haiku-4-5-20251001",
+            "nano-gpt/claude-haiku-4-5-20251001",
+            "qihang-ai/claude-haiku-4-5-20251001"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "cx",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "codex"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "cx/gpt-5.4",
+          "modelId": "gpt-5.4",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.4",
+          "candidates": [
+            "abacus/gpt-5.4",
+            "aihubmix/gpt-5.4",
+            "azure-cognitive-services/gpt-5.4",
+            "azure/gpt-5.4",
+            "github-copilot/gpt-5.4",
+            "llmgateway/gpt-5.4",
+            "openai/gpt-5.4",
+            "opencode/gpt-5.4",
+            "vivgrid/gpt-5.4"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5.3-codex",
+          "modelId": "gpt-5.3-codex",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.3-codex",
+          "candidates": [
+            "abacus/gpt-5.3-codex",
+            "azure-cognitive-services/gpt-5.3-codex",
+            "azure/gpt-5.3-codex",
+            "github-copilot/gpt-5.3-codex",
+            "llmgateway/gpt-5.3-codex",
+            "openai/gpt-5.3-codex",
+            "opencode/gpt-5.3-codex",
+            "vivgrid/gpt-5.3-codex"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5.3-codex-xhigh",
+          "modelId": "gpt-5.3-codex-xhigh",
+          "status": "matched",
+          "strategy": "suffix-unique",
+          "modelsDevId": "abacus/gpt-5.3-codex-xhigh",
+          "candidates": [
+            "abacus/gpt-5.3-codex-xhigh"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5.3-codex-high",
+          "modelId": "gpt-5.3-codex-high",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5.3-codex-low",
+          "modelId": "gpt-5.3-codex-low",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5.3-codex-none",
+          "modelId": "gpt-5.3-codex-none",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5.3-codex-spark",
+          "modelId": "gpt-5.3-codex-spark",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.3-codex-spark",
+          "candidates": [
+            "openai/gpt-5.3-codex-spark",
+            "opencode/gpt-5.3-codex-spark"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5.1-codex-mini",
+          "modelId": "gpt-5.1-codex-mini",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.1-codex-mini",
+          "candidates": [
+            "aihubmix/gpt-5.1-codex-mini",
+            "azure-cognitive-services/gpt-5.1-codex-mini",
+            "azure/gpt-5.1-codex-mini",
+            "github-copilot/gpt-5.1-codex-mini",
+            "helicone/gpt-5.1-codex-mini",
+            "jiekou/gpt-5.1-codex-mini",
+            "llmgateway/gpt-5.1-codex-mini",
+            "openai/gpt-5.1-codex-mini",
+            "opencode/gpt-5.1-codex-mini"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5.1-codex-mini-high",
+          "modelId": "gpt-5.1-codex-mini-high",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5.2-codex",
+          "modelId": "gpt-5.2-codex",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.2-codex",
+          "candidates": [
+            "abacus/gpt-5.2-codex",
+            "aihubmix/gpt-5.2-codex",
+            "azure-cognitive-services/gpt-5.2-codex",
+            "azure/gpt-5.2-codex",
+            "github-copilot/gpt-5.2-codex",
+            "jiekou/gpt-5.2-codex",
+            "llmgateway/gpt-5.2-codex",
+            "openai/gpt-5.2-codex",
+            "opencode/gpt-5.2-codex",
+            "qihang-ai/gpt-5.2-codex",
+            "vivgrid/gpt-5.2-codex"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5.2",
+          "modelId": "gpt-5.2",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.2",
+          "candidates": [
+            "302ai/gpt-5.2",
+            "abacus/gpt-5.2",
+            "aihubmix/gpt-5.2",
+            "azure-cognitive-services/gpt-5.2",
+            "azure/gpt-5.2",
+            "github-copilot/gpt-5.2",
+            "jiekou/gpt-5.2",
+            "llmgateway/gpt-5.2",
+            "openai/gpt-5.2",
+            "opencode/gpt-5.2",
+            "qihang-ai/gpt-5.2"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5.1-codex-max",
+          "modelId": "gpt-5.1-codex-max",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.1-codex-max",
+          "candidates": [
+            "abacus/gpt-5.1-codex-max",
+            "aihubmix/gpt-5.1-codex-max",
+            "azure/gpt-5.1-codex-max",
+            "github-copilot/gpt-5.1-codex-max",
+            "jiekou/gpt-5.1-codex-max",
+            "openai/gpt-5.1-codex-max",
+            "opencode/gpt-5.1-codex-max",
+            "vivgrid/gpt-5.1-codex-max"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5.1-codex",
+          "modelId": "gpt-5.1-codex",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.1-codex",
+          "candidates": [
+            "abacus/gpt-5.1-codex",
+            "aihubmix/gpt-5.1-codex",
+            "azure-cognitive-services/gpt-5.1-codex",
+            "azure/gpt-5.1-codex",
+            "github-copilot/gpt-5.1-codex",
+            "helicone/gpt-5.1-codex",
+            "jiekou/gpt-5.1-codex",
+            "llmgateway/gpt-5.1-codex",
+            "openai/gpt-5.1-codex",
+            "opencode/gpt-5.1-codex",
+            "vivgrid/gpt-5.1-codex"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5.1",
+          "modelId": "gpt-5.1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.1",
+          "candidates": [
+            "302ai/gpt-5.1",
+            "abacus/gpt-5.1",
+            "aihubmix/gpt-5.1",
+            "azure-cognitive-services/gpt-5.1",
+            "azure/gpt-5.1",
+            "github-copilot/gpt-5.1",
+            "helicone/gpt-5.1",
+            "jiekou/gpt-5.1",
+            "llmgateway/gpt-5.1",
+            "openai/gpt-5.1",
+            "opencode/gpt-5.1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5-codex",
+          "modelId": "gpt-5-codex",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5-codex",
+          "candidates": [
+            "abacus/gpt-5-codex",
+            "aihubmix/gpt-5-codex",
+            "azure-cognitive-services/gpt-5-codex",
+            "azure/gpt-5-codex",
+            "helicone/gpt-5-codex",
+            "jiekou/gpt-5-codex",
+            "openai/gpt-5-codex",
+            "opencode/gpt-5-codex"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cx/gpt-5-codex-mini",
+          "modelId": "gpt-5-codex-mini",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        }
+      ]
+    },
+    {
+      "providerPrefix": "gc",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "gemini-cli"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "gc/gemini-3-flash-preview",
+          "modelId": "gemini-3-flash-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-3-flash-preview",
+          "candidates": [
+            "302ai/gemini-3-flash-preview",
+            "abacus/gemini-3-flash-preview",
+            "firmware/gemini-3-flash-preview",
+            "github-copilot/gemini-3-flash-preview",
+            "google-vertex/gemini-3-flash-preview",
+            "google/gemini-3-flash-preview",
+            "jiekou/gemini-3-flash-preview",
+            "llmgateway/gemini-3-flash-preview",
+            "ollama-cloud/gemini-3-flash-preview",
+            "qihang-ai/gemini-3-flash-preview",
+            "venice/gemini-3-flash-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gc/gemini-3-pro-preview",
+          "modelId": "gemini-3-pro-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-3-pro-preview",
+          "candidates": [
+            "302ai/gemini-3-pro-preview",
+            "aihubmix/gemini-3-pro-preview",
+            "firmware/gemini-3-pro-preview",
+            "github-copilot/gemini-3-pro-preview",
+            "google-vertex/gemini-3-pro-preview",
+            "google/gemini-3-pro-preview",
+            "helicone/gemini-3-pro-preview",
+            "jiekou/gemini-3-pro-preview",
+            "nano-gpt/gemini-3-pro-preview",
+            "qihang-ai/gemini-3-pro-preview"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "qw",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "qwen"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "qw/qwen3-coder-next",
+          "modelId": "qwen3-coder-next",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/qwen3-coder-next",
+            "alibaba-coding-plan-cn/qwen3-coder-next",
+            "alibaba-coding-plan/qwen3-coder-next",
+            "cortecs/qwen3-coder-next",
+            "llmgateway/qwen3-coder-next",
+            "ollama-cloud/qwen3-coder-next"
+          ]
+        },
+        {
+          "providerPrefixModelId": "qw/qwen3-coder-plus",
+          "modelId": "qwen3-coder-plus",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "alibaba/qwen3-coder-plus",
+          "candidates": [
+            "alibaba-cn/qwen3-coder-plus",
+            "alibaba-coding-plan-cn/qwen3-coder-plus",
+            "alibaba-coding-plan/qwen3-coder-plus",
+            "alibaba/qwen3-coder-plus",
+            "iflowcn/qwen3-coder-plus",
+            "llmgateway/qwen3-coder-plus"
+          ]
+        },
+        {
+          "providerPrefixModelId": "qw/qwen3-coder-flash",
+          "modelId": "qwen3-coder-flash",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "alibaba/qwen3-coder-flash",
+          "candidates": [
+            "alibaba-cn/qwen3-coder-flash",
+            "alibaba/qwen3-coder-flash",
+            "llmgateway/qwen3-coder-flash"
+          ]
+        },
+        {
+          "providerPrefixModelId": "qw/vision-model",
+          "modelId": "vision-model",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "qw/coder-model",
+          "modelId": "coder-model",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        }
+      ]
+    },
+    {
+      "providerPrefix": "if",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "iflow"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "if/qwen3-coder-plus",
+          "modelId": "qwen3-coder-plus",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "iflowcn/qwen3-coder-plus",
+          "candidates": [
+            "alibaba-cn/qwen3-coder-plus",
+            "alibaba-coding-plan-cn/qwen3-coder-plus",
+            "alibaba-coding-plan/qwen3-coder-plus",
+            "alibaba/qwen3-coder-plus",
+            "iflowcn/qwen3-coder-plus",
+            "llmgateway/qwen3-coder-plus"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/qwen3-max",
+          "modelId": "qwen3-max",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "iflowcn/qwen3-max",
+          "candidates": [
+            "abacus/qwen3-max",
+            "alibaba-cn/qwen3-max",
+            "alibaba/qwen3-max",
+            "iflowcn/qwen3-max",
+            "llmgateway/qwen3-max",
+            "qiniu-ai/qwen3-max"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/qwen3-vl-plus",
+          "modelId": "qwen3-vl-plus",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "iflowcn/qwen3-vl-plus",
+          "candidates": [
+            "alibaba-cn/qwen3-vl-plus",
+            "alibaba/qwen3-vl-plus",
+            "iflowcn/qwen3-vl-plus",
+            "llmgateway/qwen3-vl-plus"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/qwen3-max-preview",
+          "modelId": "qwen3-max-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "iflowcn/qwen3-max-preview",
+          "candidates": [
+            "iflowcn/qwen3-max-preview",
+            "qiniu-ai/qwen3-max-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/qwen3-235b",
+          "modelId": "qwen3-235b",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "iflowcn/qwen3-235b",
+          "candidates": [
+            "iflowcn/qwen3-235b"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/qwen3-235b-a22b-instruct",
+          "modelId": "qwen3-235b-a22b-instruct",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "iflowcn/qwen3-235b-a22b-instruct",
+          "candidates": [
+            "iflowcn/qwen3-235b-a22b-instruct"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/qwen3-235b-a22b-thinking-2507",
+          "modelId": "qwen3-235b-a22b-thinking-2507",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "iflowcn/qwen3-235b-a22b-thinking-2507",
+          "candidates": [
+            "aihubmix/qwen3-235b-a22b-thinking-2507",
+            "iflowcn/qwen3-235b-a22b-thinking-2507",
+            "llmgateway/qwen3-235b-a22b-thinking-2507",
+            "qiniu-ai/qwen3-235b-a22b-thinking-2507",
+            "venice/qwen3-235b-a22b-thinking-2507"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/qwen3-32b",
+          "modelId": "qwen3-32b",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "iflowcn/qwen3-32b",
+          "candidates": [
+            "alibaba-cn/qwen3-32b",
+            "alibaba/qwen3-32b",
+            "cortecs/qwen3-32b",
+            "helicone/qwen3-32b",
+            "iflowcn/qwen3-32b",
+            "llmgateway/qwen3-32b",
+            "ovhcloud/qwen3-32b",
+            "qiniu-ai/qwen3-32b"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/kimi-k2",
+          "modelId": "kimi-k2",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "iflowcn/kimi-k2",
+          "candidates": [
+            "iflowcn/kimi-k2",
+            "llmgateway/kimi-k2",
+            "opencode/kimi-k2",
+            "qiniu-ai/kimi-k2"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/deepseek-v3.2",
+          "modelId": "deepseek-v3.2",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "iflowcn/deepseek-v3.2",
+          "candidates": [
+            "302ai/deepseek-v3.2",
+            "aihubmix/deepseek-v3.2",
+            "azure-cognitive-services/deepseek-v3.2",
+            "azure/deepseek-v3.2",
+            "helicone/deepseek-v3.2",
+            "iflowcn/deepseek-v3.2",
+            "llmgateway/deepseek-v3.2",
+            "ollama-cloud/deepseek-v3.2",
+            "venice/deepseek-v3.2",
+            "vivgrid/deepseek-v3.2",
+            "vultr/DeepSeek-V3.2"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/deepseek-v3.1",
+          "modelId": "deepseek-v3.1",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "azure-cognitive-services/deepseek-v3.1",
+            "azure/deepseek-v3.1",
+            "llmgateway/deepseek-v3.1",
+            "qiniu-ai/deepseek-v3.1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/deepseek-v3",
+          "modelId": "deepseek-v3",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "iflowcn/deepseek-v3",
+          "candidates": [
+            "alibaba-cn/deepseek-v3",
+            "helicone/deepseek-v3",
+            "iflowcn/deepseek-v3",
+            "qiniu-ai/deepseek-v3"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/deepseek-r1",
+          "modelId": "deepseek-r1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "iflowcn/deepseek-r1",
+          "candidates": [
+            "alibaba-cn/deepseek-r1",
+            "azure-cognitive-services/deepseek-r1",
+            "azure/deepseek-r1",
+            "iflowcn/deepseek-r1",
+            "nano-gpt/deepseek-r1",
+            "qiniu-ai/deepseek-r1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/glm-4.7",
+          "modelId": "glm-4.7",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "302ai/glm-4.7",
+            "aihubmix/glm-4.7",
+            "alibaba-coding-plan-cn/glm-4.7",
+            "alibaba-coding-plan/glm-4.7",
+            "cortecs/glm-4.7",
+            "dinference/glm-4.7",
+            "kuae-cloud-coding-plan/GLM-4.7",
+            "llmgateway/glm-4.7",
+            "moark/GLM-4.7",
+            "ollama-cloud/glm-4.7",
+            "opencode/glm-4.7",
+            "zai-coding-plan/glm-4.7",
+            "zai/glm-4.7",
+            "zhipuai-coding-plan/glm-4.7",
+            "zhipuai/glm-4.7"
+          ]
+        },
+        {
+          "providerPrefixModelId": "if/iflow-rome-30ba3b",
+          "modelId": "iflow-rome-30ba3b",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        }
+      ]
+    },
+    {
+      "providerPrefix": "ag",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "antigravity"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "ag/gemini-3.1-pro-high",
+          "modelId": "gemini-3.1-pro-high",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "ag/gemini-3.1-pro-low",
+          "modelId": "gemini-3.1-pro-low",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "ag/gemini-3-flash",
+          "modelId": "gemini-3-flash",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "opencode/gemini-3-flash",
+          "candidates": [
+            "opencode/gemini-3-flash"
+          ]
+        },
+        {
+          "providerPrefixModelId": "ag/claude-sonnet-4-6",
+          "modelId": "claude-sonnet-4-6",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "opencode/claude-sonnet-4-6",
+          "candidates": [
+            "abacus/claude-sonnet-4-6",
+            "aihubmix/claude-sonnet-4-6",
+            "anthropic/claude-sonnet-4-6",
+            "firmware/claude-sonnet-4-6",
+            "llmgateway/claude-sonnet-4-6",
+            "opencode/claude-sonnet-4-6",
+            "venice/claude-sonnet-4-6"
+          ]
+        },
+        {
+          "providerPrefixModelId": "ag/claude-opus-4-6-thinking",
+          "modelId": "claude-opus-4-6-thinking",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "ag/gpt-oss-120b-medium",
+          "modelId": "gpt-oss-120b-medium",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        }
+      ]
+    },
+    {
+      "providerPrefix": "gh",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "github"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "gh/gpt-3.5-turbo",
+          "modelId": "gpt-3.5-turbo",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-3.5-turbo",
+          "candidates": [
+            "llmgateway/gpt-3.5-turbo",
+            "openai/gpt-3.5-turbo"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-4",
+          "modelId": "gpt-4",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-4",
+          "candidates": [
+            "azure-cognitive-services/gpt-4",
+            "azure/gpt-4",
+            "llmgateway/gpt-4",
+            "openai/gpt-4"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-4o",
+          "modelId": "gpt-4o",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gpt-4o",
+          "candidates": [
+            "302ai/gpt-4o",
+            "aihubmix/gpt-4o",
+            "azure-cognitive-services/gpt-4o",
+            "azure/gpt-4o",
+            "firmware/gpt-4o",
+            "github-copilot/gpt-4o",
+            "helicone/gpt-4o",
+            "llmgateway/gpt-4o",
+            "openai/gpt-4o"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-4o-mini",
+          "modelId": "gpt-4o-mini",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-4o-mini",
+          "candidates": [
+            "abacus/gpt-4o-mini",
+            "azure-cognitive-services/gpt-4o-mini",
+            "azure/gpt-4o-mini",
+            "helicone/gpt-4o-mini",
+            "llmgateway/gpt-4o-mini",
+            "openai/gpt-4o-mini"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-4.1",
+          "modelId": "gpt-4.1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gpt-4.1",
+          "candidates": [
+            "302ai/gpt-4.1",
+            "abacus/gpt-4.1",
+            "aihubmix/gpt-4.1",
+            "azure-cognitive-services/gpt-4.1",
+            "azure/gpt-4.1",
+            "cortecs/gpt-4.1",
+            "github-copilot/gpt-4.1",
+            "helicone/gpt-4.1",
+            "llmgateway/gpt-4.1",
+            "openai/gpt-4.1",
+            "sap-ai-core/gpt-4.1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-5",
+          "modelId": "gpt-5",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gpt-5",
+          "candidates": [
+            "302ai/gpt-5",
+            "abacus/gpt-5",
+            "aihubmix/gpt-5",
+            "azure-cognitive-services/gpt-5",
+            "azure/gpt-5",
+            "github-copilot/gpt-5",
+            "helicone/gpt-5",
+            "llmgateway/gpt-5",
+            "openai/gpt-5",
+            "opencode/gpt-5",
+            "sap-ai-core/gpt-5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-5-mini",
+          "modelId": "gpt-5-mini",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gpt-5-mini",
+          "candidates": [
+            "302ai/gpt-5-mini",
+            "abacus/gpt-5-mini",
+            "aihubmix/gpt-5-mini",
+            "azure-cognitive-services/gpt-5-mini",
+            "azure/gpt-5-mini",
+            "firmware/gpt-5-mini",
+            "github-copilot/gpt-5-mini",
+            "helicone/gpt-5-mini",
+            "jiekou/gpt-5-mini",
+            "llmgateway/gpt-5-mini",
+            "openai/gpt-5-mini",
+            "qihang-ai/gpt-5-mini",
+            "sap-ai-core/gpt-5-mini",
+            "vivgrid/gpt-5-mini"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-5-codex",
+          "modelId": "gpt-5-codex",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5-codex",
+          "candidates": [
+            "abacus/gpt-5-codex",
+            "aihubmix/gpt-5-codex",
+            "azure-cognitive-services/gpt-5-codex",
+            "azure/gpt-5-codex",
+            "helicone/gpt-5-codex",
+            "jiekou/gpt-5-codex",
+            "openai/gpt-5-codex",
+            "opencode/gpt-5-codex"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-5.1",
+          "modelId": "gpt-5.1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gpt-5.1",
+          "candidates": [
+            "302ai/gpt-5.1",
+            "abacus/gpt-5.1",
+            "aihubmix/gpt-5.1",
+            "azure-cognitive-services/gpt-5.1",
+            "azure/gpt-5.1",
+            "github-copilot/gpt-5.1",
+            "helicone/gpt-5.1",
+            "jiekou/gpt-5.1",
+            "llmgateway/gpt-5.1",
+            "openai/gpt-5.1",
+            "opencode/gpt-5.1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-5.1-codex",
+          "modelId": "gpt-5.1-codex",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gpt-5.1-codex",
+          "candidates": [
+            "abacus/gpt-5.1-codex",
+            "aihubmix/gpt-5.1-codex",
+            "azure-cognitive-services/gpt-5.1-codex",
+            "azure/gpt-5.1-codex",
+            "github-copilot/gpt-5.1-codex",
+            "helicone/gpt-5.1-codex",
+            "jiekou/gpt-5.1-codex",
+            "llmgateway/gpt-5.1-codex",
+            "openai/gpt-5.1-codex",
+            "opencode/gpt-5.1-codex",
+            "vivgrid/gpt-5.1-codex"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-5.1-codex-mini",
+          "modelId": "gpt-5.1-codex-mini",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gpt-5.1-codex-mini",
+          "candidates": [
+            "aihubmix/gpt-5.1-codex-mini",
+            "azure-cognitive-services/gpt-5.1-codex-mini",
+            "azure/gpt-5.1-codex-mini",
+            "github-copilot/gpt-5.1-codex-mini",
+            "helicone/gpt-5.1-codex-mini",
+            "jiekou/gpt-5.1-codex-mini",
+            "llmgateway/gpt-5.1-codex-mini",
+            "openai/gpt-5.1-codex-mini",
+            "opencode/gpt-5.1-codex-mini"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-5.1-codex-max",
+          "modelId": "gpt-5.1-codex-max",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gpt-5.1-codex-max",
+          "candidates": [
+            "abacus/gpt-5.1-codex-max",
+            "aihubmix/gpt-5.1-codex-max",
+            "azure/gpt-5.1-codex-max",
+            "github-copilot/gpt-5.1-codex-max",
+            "jiekou/gpt-5.1-codex-max",
+            "openai/gpt-5.1-codex-max",
+            "opencode/gpt-5.1-codex-max",
+            "vivgrid/gpt-5.1-codex-max"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-5.2",
+          "modelId": "gpt-5.2",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gpt-5.2",
+          "candidates": [
+            "302ai/gpt-5.2",
+            "abacus/gpt-5.2",
+            "aihubmix/gpt-5.2",
+            "azure-cognitive-services/gpt-5.2",
+            "azure/gpt-5.2",
+            "github-copilot/gpt-5.2",
+            "jiekou/gpt-5.2",
+            "llmgateway/gpt-5.2",
+            "openai/gpt-5.2",
+            "opencode/gpt-5.2",
+            "qihang-ai/gpt-5.2"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-5.2-codex",
+          "modelId": "gpt-5.2-codex",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gpt-5.2-codex",
+          "candidates": [
+            "abacus/gpt-5.2-codex",
+            "aihubmix/gpt-5.2-codex",
+            "azure-cognitive-services/gpt-5.2-codex",
+            "azure/gpt-5.2-codex",
+            "github-copilot/gpt-5.2-codex",
+            "jiekou/gpt-5.2-codex",
+            "llmgateway/gpt-5.2-codex",
+            "openai/gpt-5.2-codex",
+            "opencode/gpt-5.2-codex",
+            "qihang-ai/gpt-5.2-codex",
+            "vivgrid/gpt-5.2-codex"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-5.3-codex",
+          "modelId": "gpt-5.3-codex",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gpt-5.3-codex",
+          "candidates": [
+            "abacus/gpt-5.3-codex",
+            "azure-cognitive-services/gpt-5.3-codex",
+            "azure/gpt-5.3-codex",
+            "github-copilot/gpt-5.3-codex",
+            "llmgateway/gpt-5.3-codex",
+            "openai/gpt-5.3-codex",
+            "opencode/gpt-5.3-codex",
+            "vivgrid/gpt-5.3-codex"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gpt-5.4",
+          "modelId": "gpt-5.4",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gpt-5.4",
+          "candidates": [
+            "abacus/gpt-5.4",
+            "aihubmix/gpt-5.4",
+            "azure-cognitive-services/gpt-5.4",
+            "azure/gpt-5.4",
+            "github-copilot/gpt-5.4",
+            "llmgateway/gpt-5.4",
+            "openai/gpt-5.4",
+            "opencode/gpt-5.4",
+            "vivgrid/gpt-5.4"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/claude-haiku-4.5",
+          "modelId": "claude-haiku-4.5",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/claude-haiku-4.5",
+          "candidates": [
+            "github-copilot/claude-haiku-4.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/claude-opus-4.1",
+          "modelId": "claude-opus-4.1",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "gh/claude-opus-4.5",
+          "modelId": "claude-opus-4.5",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/claude-opus-4.5",
+          "candidates": [
+            "github-copilot/claude-opus-4.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/claude-sonnet-4",
+          "modelId": "claude-sonnet-4",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/claude-sonnet-4",
+          "candidates": [
+            "cortecs/claude-sonnet-4",
+            "github-copilot/claude-sonnet-4",
+            "helicone/claude-sonnet-4",
+            "opencode/claude-sonnet-4"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/claude-sonnet-4.5",
+          "modelId": "claude-sonnet-4.5",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/claude-sonnet-4.5",
+          "candidates": [
+            "github-copilot/claude-sonnet-4.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/claude-sonnet-4.6",
+          "modelId": "claude-sonnet-4.6",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/claude-sonnet-4.6",
+          "candidates": [
+            "github-copilot/claude-sonnet-4.6"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/claude-opus-4.6",
+          "modelId": "claude-opus-4.6",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/claude-opus-4.6",
+          "candidates": [
+            "github-copilot/claude-opus-4.6"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gemini-2.5-pro",
+          "modelId": "gemini-2.5-pro",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gemini-2.5-pro",
+          "candidates": [
+            "302ai/gemini-2.5-pro",
+            "abacus/gemini-2.5-pro",
+            "aihubmix/gemini-2.5-pro",
+            "cortecs/gemini-2.5-pro",
+            "firmware/gemini-2.5-pro",
+            "github-copilot/gemini-2.5-pro",
+            "google-vertex/gemini-2.5-pro",
+            "google/gemini-2.5-pro",
+            "helicone/gemini-2.5-pro",
+            "jiekou/gemini-2.5-pro",
+            "llmgateway/gemini-2.5-pro",
+            "nano-gpt/gemini-2.5-pro",
+            "qiniu-ai/gemini-2.5-pro",
+            "sap-ai-core/gemini-2.5-pro"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gemini-3-flash-preview",
+          "modelId": "gemini-3-flash-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gemini-3-flash-preview",
+          "candidates": [
+            "302ai/gemini-3-flash-preview",
+            "abacus/gemini-3-flash-preview",
+            "firmware/gemini-3-flash-preview",
+            "github-copilot/gemini-3-flash-preview",
+            "google-vertex/gemini-3-flash-preview",
+            "google/gemini-3-flash-preview",
+            "jiekou/gemini-3-flash-preview",
+            "llmgateway/gemini-3-flash-preview",
+            "ollama-cloud/gemini-3-flash-preview",
+            "qihang-ai/gemini-3-flash-preview",
+            "venice/gemini-3-flash-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/gemini-3-pro-preview",
+          "modelId": "gemini-3-pro-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/gemini-3-pro-preview",
+          "candidates": [
+            "302ai/gemini-3-pro-preview",
+            "aihubmix/gemini-3-pro-preview",
+            "firmware/gemini-3-pro-preview",
+            "github-copilot/gemini-3-pro-preview",
+            "google-vertex/gemini-3-pro-preview",
+            "google/gemini-3-pro-preview",
+            "helicone/gemini-3-pro-preview",
+            "jiekou/gemini-3-pro-preview",
+            "nano-gpt/gemini-3-pro-preview",
+            "qihang-ai/gemini-3-pro-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/grok-code-fast-1",
+          "modelId": "grok-code-fast-1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/grok-code-fast-1",
+          "candidates": [
+            "abacus/grok-code-fast-1",
+            "azure-cognitive-services/grok-code-fast-1",
+            "azure/grok-code-fast-1",
+            "firmware/grok-code-fast-1",
+            "github-copilot/grok-code-fast-1",
+            "helicone/grok-code-fast-1",
+            "jiekou/grok-code-fast-1",
+            "llmgateway/grok-code-fast-1",
+            "xai/grok-code-fast-1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gh/oswe-vscode-prime",
+          "modelId": "oswe-vscode-prime",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        }
+      ]
+    },
+    {
+      "providerPrefix": "kr",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "kiro"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "kr/claude-opus-4.5",
+          "modelId": "claude-opus-4.5",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/claude-opus-4.5",
+          "candidates": [
+            "github-copilot/claude-opus-4.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kr/claude-sonnet-4.5",
+          "modelId": "claude-sonnet-4.5",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/claude-sonnet-4.5",
+          "candidates": [
+            "github-copilot/claude-sonnet-4.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kr/claude-haiku-4.5",
+          "modelId": "claude-haiku-4.5",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "github-copilot/claude-haiku-4.5",
+          "candidates": [
+            "github-copilot/claude-haiku-4.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kr/deepseek-3.2",
+          "modelId": "deepseek-3.2",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "kr/deepseek-3.1",
+          "modelId": "deepseek-3.1",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "kr/qwen3-coder-next",
+          "modelId": "qwen3-coder-next",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/qwen3-coder-next",
+            "alibaba-coding-plan-cn/qwen3-coder-next",
+            "alibaba-coding-plan/qwen3-coder-next",
+            "cortecs/qwen3-coder-next",
+            "llmgateway/qwen3-coder-next",
+            "ollama-cloud/qwen3-coder-next"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kr/glm-5",
+          "modelId": "glm-5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/glm-5",
+            "alibaba-cn/glm-5",
+            "alibaba-coding-plan-cn/glm-5",
+            "alibaba-coding-plan/glm-5",
+            "cortecs/glm-5",
+            "digitalocean/glm-5",
+            "dinference/glm-5",
+            "llmgateway/glm-5",
+            "ollama-cloud/glm-5",
+            "opencode-go/glm-5",
+            "opencode/glm-5",
+            "tencent-coding-plan/glm-5",
+            "vivgrid/glm-5",
+            "zai-coding-plan/glm-5",
+            "zai/glm-5",
+            "zhipuai-coding-plan/glm-5",
+            "zhipuai/glm-5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kr/MiniMax-M2.5",
+          "modelId": "MiniMax-M2.5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/minimax-m2.5",
+            "alibaba-cn/MiniMax-M2.5",
+            "alibaba-coding-plan-cn/MiniMax-M2.5",
+            "alibaba-coding-plan/MiniMax-M2.5",
+            "cortecs/minimax-m2.5",
+            "digitalocean/minimax-m2.5",
+            "llmgateway/minimax-m2.5",
+            "minimax-cn-coding-plan/MiniMax-M2.5",
+            "minimax-cn/MiniMax-M2.5",
+            "minimax-coding-plan/MiniMax-M2.5",
+            "minimax/MiniMax-M2.5",
+            "ollama-cloud/minimax-m2.5",
+            "opencode-go/minimax-m2.5",
+            "opencode/minimax-m2.5",
+            "tencent-coding-plan/minimax-m2.5",
+            "vultr/MiniMax-M2.5"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "cu",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "cursor"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "cu/default",
+          "modelId": "default",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "cu/claude-4.5-opus-high-thinking",
+          "modelId": "claude-4.5-opus-high-thinking",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "cu/claude-4.5-opus-high",
+          "modelId": "claude-4.5-opus-high",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "cu/claude-4.5-sonnet-thinking",
+          "modelId": "claude-4.5-sonnet-thinking",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "cu/claude-4.5-sonnet",
+          "modelId": "claude-4.5-sonnet",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "helicone/claude-4.5-sonnet",
+            "qiniu-ai/claude-4.5-sonnet"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cu/claude-4.5-haiku",
+          "modelId": "claude-4.5-haiku",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "helicone/claude-4.5-haiku",
+            "qiniu-ai/claude-4.5-haiku"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cu/claude-4.5-opus",
+          "modelId": "claude-4.5-opus",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "helicone/claude-4.5-opus",
+            "qiniu-ai/claude-4.5-opus"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cu/gpt-5.2-codex",
+          "modelId": "gpt-5.2-codex",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.2-codex",
+          "candidates": [
+            "abacus/gpt-5.2-codex",
+            "aihubmix/gpt-5.2-codex",
+            "azure-cognitive-services/gpt-5.2-codex",
+            "azure/gpt-5.2-codex",
+            "github-copilot/gpt-5.2-codex",
+            "jiekou/gpt-5.2-codex",
+            "llmgateway/gpt-5.2-codex",
+            "openai/gpt-5.2-codex",
+            "opencode/gpt-5.2-codex",
+            "qihang-ai/gpt-5.2-codex",
+            "vivgrid/gpt-5.2-codex"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cu/claude-4.6-opus-max",
+          "modelId": "claude-4.6-opus-max",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "cu/claude-4.6-sonnet-medium-thinking",
+          "modelId": "claude-4.6-sonnet-medium-thinking",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "cu/kimi-k2.5",
+          "modelId": "kimi-k2.5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "abacus/kimi-k2.5",
+            "aihubmix/kimi-k2.5",
+            "alibaba-cn/kimi-k2.5",
+            "alibaba-coding-plan-cn/kimi-k2.5",
+            "alibaba-coding-plan/kimi-k2.5",
+            "azure-cognitive-services/kimi-k2.5",
+            "azure/kimi-k2.5",
+            "cortecs/kimi-k2.5",
+            "digitalocean/kimi-k2.5",
+            "firmware/kimi-k2.5",
+            "llmgateway/kimi-k2.5",
+            "moonshotai-cn/kimi-k2.5",
+            "moonshotai/kimi-k2.5",
+            "ollama-cloud/kimi-k2.5",
+            "opencode-go/kimi-k2.5",
+            "opencode/kimi-k2.5",
+            "tencent-coding-plan/kimi-k2.5",
+            "vultr/Kimi-K2.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cu/gemini-3-flash-preview",
+          "modelId": "gemini-3-flash-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-3-flash-preview",
+          "candidates": [
+            "302ai/gemini-3-flash-preview",
+            "abacus/gemini-3-flash-preview",
+            "firmware/gemini-3-flash-preview",
+            "github-copilot/gemini-3-flash-preview",
+            "google-vertex/gemini-3-flash-preview",
+            "google/gemini-3-flash-preview",
+            "jiekou/gemini-3-flash-preview",
+            "llmgateway/gemini-3-flash-preview",
+            "ollama-cloud/gemini-3-flash-preview",
+            "qihang-ai/gemini-3-flash-preview",
+            "venice/gemini-3-flash-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cu/gpt-5.2",
+          "modelId": "gpt-5.2",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.2",
+          "candidates": [
+            "302ai/gpt-5.2",
+            "abacus/gpt-5.2",
+            "aihubmix/gpt-5.2",
+            "azure-cognitive-services/gpt-5.2",
+            "azure/gpt-5.2",
+            "github-copilot/gpt-5.2",
+            "jiekou/gpt-5.2",
+            "llmgateway/gpt-5.2",
+            "openai/gpt-5.2",
+            "opencode/gpt-5.2",
+            "qihang-ai/gpt-5.2"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cu/gpt-5.3-codex",
+          "modelId": "gpt-5.3-codex",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.3-codex",
+          "candidates": [
+            "abacus/gpt-5.3-codex",
+            "azure-cognitive-services/gpt-5.3-codex",
+            "azure/gpt-5.3-codex",
+            "github-copilot/gpt-5.3-codex",
+            "llmgateway/gpt-5.3-codex",
+            "openai/gpt-5.3-codex",
+            "opencode/gpt-5.3-codex",
+            "vivgrid/gpt-5.3-codex"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "kmc",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "kmc"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "kmc/kimi-k2.5",
+          "modelId": "kimi-k2.5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "abacus/kimi-k2.5",
+            "aihubmix/kimi-k2.5",
+            "alibaba-cn/kimi-k2.5",
+            "alibaba-coding-plan-cn/kimi-k2.5",
+            "alibaba-coding-plan/kimi-k2.5",
+            "azure-cognitive-services/kimi-k2.5",
+            "azure/kimi-k2.5",
+            "cortecs/kimi-k2.5",
+            "digitalocean/kimi-k2.5",
+            "firmware/kimi-k2.5",
+            "llmgateway/kimi-k2.5",
+            "moonshotai-cn/kimi-k2.5",
+            "moonshotai/kimi-k2.5",
+            "ollama-cloud/kimi-k2.5",
+            "opencode-go/kimi-k2.5",
+            "opencode/kimi-k2.5",
+            "tencent-coding-plan/kimi-k2.5",
+            "vultr/Kimi-K2.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kmc/kimi-k2.5-thinking",
+          "modelId": "kimi-k2.5-thinking",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "kmc/kimi-latest",
+          "modelId": "kimi-latest",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        }
+      ]
+    },
+    {
+      "providerPrefix": "kc",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "kilocode"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "kc/anthropic/claude-sonnet-4-20250514",
+          "modelId": "anthropic/claude-sonnet-4-20250514",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "anthropic/claude-sonnet-4-20250514",
+          "candidates": [
+            "anthropic/claude-sonnet-4-20250514"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kc/anthropic/claude-opus-4-20250514",
+          "modelId": "anthropic/claude-opus-4-20250514",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "anthropic/claude-opus-4-20250514",
+          "candidates": [
+            "anthropic/claude-opus-4-20250514"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kc/google/gemini-2.5-pro",
+          "modelId": "google/gemini-2.5-pro",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "google/gemini-2.5-pro",
+          "candidates": [
+            "google/gemini-2.5-pro"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kc/google/gemini-2.5-flash",
+          "modelId": "google/gemini-2.5-flash",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "google/gemini-2.5-flash",
+          "candidates": [
+            "google/gemini-2.5-flash"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kc/openai/gpt-4.1",
+          "modelId": "openai/gpt-4.1",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "openai/gpt-4.1",
+          "candidates": [
+            "openai/gpt-4.1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kc/openai/o3",
+          "modelId": "openai/o3",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "openai/o3",
+          "candidates": [
+            "openai/o3"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kc/deepseek/deepseek-chat",
+          "modelId": "deepseek/deepseek-chat",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "deepseek/deepseek-chat",
+          "candidates": [
+            "deepseek/deepseek-chat"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kc/deepseek/deepseek-reasoner",
+          "modelId": "deepseek/deepseek-reasoner",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "deepseek/deepseek-reasoner",
+          "candidates": [
+            "deepseek/deepseek-reasoner"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "oc",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "opencode"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "oc/nemotron-3-super-free",
+          "modelId": "nemotron-3-super-free",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "opencode/nemotron-3-super-free",
+          "candidates": [
+            "opencode/nemotron-3-super-free"
+          ]
+        },
+        {
+          "providerPrefixModelId": "oc/qwen3.6-plus-free",
+          "modelId": "qwen3.6-plus-free",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "opencode/qwen3.6-plus-free",
+          "candidates": [
+            "opencode/qwen3.6-plus-free"
+          ]
+        },
+        {
+          "providerPrefixModelId": "oc/big-pickle",
+          "modelId": "big-pickle",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "opencode/big-pickle",
+          "candidates": [
+            "opencode/big-pickle"
+          ]
+        },
+        {
+          "providerPrefixModelId": "oc/minimax-m2.5-free",
+          "modelId": "minimax-m2.5-free",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "opencode/minimax-m2.5-free",
+          "candidates": [
+            "opencode/minimax-m2.5-free"
+          ]
+        },
+        {
+          "providerPrefixModelId": "oc/trinity-large-preview-free",
+          "modelId": "trinity-large-preview-free",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "opencode/trinity-large-preview-free",
+          "candidates": [
+            "opencode/trinity-large-preview-free"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "cl",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "cline"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "cl/anthropic/claude-opus-4.7",
+          "modelId": "anthropic/claude-opus-4.7",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "openrouter/anthropic/claude-opus-4.7",
+            "poe/anthropic/claude-opus-4.7",
+            "vercel/anthropic/claude-opus-4.7",
+            "zenmux/anthropic/claude-opus-4.7"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cl/anthropic/claude-sonnet-4.6",
+          "modelId": "anthropic/claude-sonnet-4.6",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "kilo/anthropic/claude-sonnet-4.6",
+            "nano-gpt/anthropic/claude-sonnet-4.6",
+            "openrouter/anthropic/claude-sonnet-4.6",
+            "poe/anthropic/claude-sonnet-4.6",
+            "vercel/anthropic/claude-sonnet-4.6",
+            "zenmux/anthropic/claude-sonnet-4.6"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cl/anthropic/claude-opus-4.6",
+          "modelId": "anthropic/claude-opus-4.6",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "kilo/anthropic/claude-opus-4.6",
+            "nano-gpt/anthropic/claude-opus-4.6",
+            "openrouter/anthropic/claude-opus-4.6",
+            "poe/anthropic/claude-opus-4.6",
+            "vercel/anthropic/claude-opus-4.6",
+            "zenmux/anthropic/claude-opus-4.6"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cl/openai/gpt-5.3-codex",
+          "modelId": "openai/gpt-5.3-codex",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "openai/gpt-5.3-codex",
+          "candidates": [
+            "openai/gpt-5.3-codex"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cl/openai/gpt-5.4",
+          "modelId": "openai/gpt-5.4",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "openai/gpt-5.4",
+          "candidates": [
+            "openai/gpt-5.4"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cl/google/gemini-3.1-pro-preview",
+          "modelId": "google/gemini-3.1-pro-preview",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "google/gemini-3.1-pro-preview",
+          "candidates": [
+            "google/gemini-3.1-pro-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cl/google/gemini-3.1-flash-lite-preview",
+          "modelId": "google/gemini-3.1-flash-lite-preview",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "google/gemini-3.1-flash-lite-preview",
+          "candidates": [
+            "google/gemini-3.1-flash-lite-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cl/kwaipilot/kat-coder-pro",
+          "modelId": "kwaipilot/kat-coder-pro",
+          "status": "matched",
+          "strategy": "suffix-unique",
+          "modelsDevId": "novita-ai/kwaipilot/kat-coder-pro",
+          "candidates": [
+            "novita-ai/kwaipilot/kat-coder-pro"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "openai",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "openai"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "openai/gpt-5.4",
+          "modelId": "gpt-5.4",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.4",
+          "candidates": [
+            "abacus/gpt-5.4",
+            "aihubmix/gpt-5.4",
+            "azure-cognitive-services/gpt-5.4",
+            "azure/gpt-5.4",
+            "github-copilot/gpt-5.4",
+            "llmgateway/gpt-5.4",
+            "openai/gpt-5.4",
+            "opencode/gpt-5.4",
+            "vivgrid/gpt-5.4"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-5.4-mini",
+          "modelId": "gpt-5.4-mini",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.4-mini",
+          "candidates": [
+            "aihubmix/gpt-5.4-mini",
+            "azure-cognitive-services/gpt-5.4-mini",
+            "azure/gpt-5.4-mini",
+            "github-copilot/gpt-5.4-mini",
+            "llmgateway/gpt-5.4-mini",
+            "openai/gpt-5.4-mini",
+            "opencode/gpt-5.4-mini",
+            "vivgrid/gpt-5.4-mini"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-5.4-nano",
+          "modelId": "gpt-5.4-nano",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.4-nano",
+          "candidates": [
+            "azure-cognitive-services/gpt-5.4-nano",
+            "azure/gpt-5.4-nano",
+            "llmgateway/gpt-5.4-nano",
+            "openai/gpt-5.4-nano",
+            "opencode/gpt-5.4-nano",
+            "vivgrid/gpt-5.4-nano"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-5.2",
+          "modelId": "gpt-5.2",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.2",
+          "candidates": [
+            "302ai/gpt-5.2",
+            "abacus/gpt-5.2",
+            "aihubmix/gpt-5.2",
+            "azure-cognitive-services/gpt-5.2",
+            "azure/gpt-5.2",
+            "github-copilot/gpt-5.2",
+            "jiekou/gpt-5.2",
+            "llmgateway/gpt-5.2",
+            "openai/gpt-5.2",
+            "opencode/gpt-5.2",
+            "qihang-ai/gpt-5.2"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-5.1",
+          "modelId": "gpt-5.1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5.1",
+          "candidates": [
+            "302ai/gpt-5.1",
+            "abacus/gpt-5.1",
+            "aihubmix/gpt-5.1",
+            "azure-cognitive-services/gpt-5.1",
+            "azure/gpt-5.1",
+            "github-copilot/gpt-5.1",
+            "helicone/gpt-5.1",
+            "jiekou/gpt-5.1",
+            "llmgateway/gpt-5.1",
+            "openai/gpt-5.1",
+            "opencode/gpt-5.1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-5",
+          "modelId": "gpt-5",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5",
+          "candidates": [
+            "302ai/gpt-5",
+            "abacus/gpt-5",
+            "aihubmix/gpt-5",
+            "azure-cognitive-services/gpt-5",
+            "azure/gpt-5",
+            "github-copilot/gpt-5",
+            "helicone/gpt-5",
+            "llmgateway/gpt-5",
+            "openai/gpt-5",
+            "opencode/gpt-5",
+            "sap-ai-core/gpt-5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-5-mini",
+          "modelId": "gpt-5-mini",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5-mini",
+          "candidates": [
+            "302ai/gpt-5-mini",
+            "abacus/gpt-5-mini",
+            "aihubmix/gpt-5-mini",
+            "azure-cognitive-services/gpt-5-mini",
+            "azure/gpt-5-mini",
+            "firmware/gpt-5-mini",
+            "github-copilot/gpt-5-mini",
+            "helicone/gpt-5-mini",
+            "jiekou/gpt-5-mini",
+            "llmgateway/gpt-5-mini",
+            "openai/gpt-5-mini",
+            "qihang-ai/gpt-5-mini",
+            "sap-ai-core/gpt-5-mini",
+            "vivgrid/gpt-5-mini"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-5-nano",
+          "modelId": "gpt-5-nano",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-5-nano",
+          "candidates": [
+            "abacus/gpt-5-nano",
+            "aihubmix/gpt-5-nano",
+            "azure-cognitive-services/gpt-5-nano",
+            "azure/gpt-5-nano",
+            "firmware/gpt-5-nano",
+            "helicone/gpt-5-nano",
+            "jiekou/gpt-5-nano",
+            "llmgateway/gpt-5-nano",
+            "openai/gpt-5-nano",
+            "opencode/gpt-5-nano",
+            "sap-ai-core/gpt-5-nano"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-4o",
+          "modelId": "gpt-4o",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-4o",
+          "candidates": [
+            "302ai/gpt-4o",
+            "aihubmix/gpt-4o",
+            "azure-cognitive-services/gpt-4o",
+            "azure/gpt-4o",
+            "firmware/gpt-4o",
+            "github-copilot/gpt-4o",
+            "helicone/gpt-4o",
+            "llmgateway/gpt-4o",
+            "openai/gpt-4o"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-4o-mini",
+          "modelId": "gpt-4o-mini",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-4o-mini",
+          "candidates": [
+            "abacus/gpt-4o-mini",
+            "azure-cognitive-services/gpt-4o-mini",
+            "azure/gpt-4o-mini",
+            "helicone/gpt-4o-mini",
+            "llmgateway/gpt-4o-mini",
+            "openai/gpt-4o-mini"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-4-turbo",
+          "modelId": "gpt-4-turbo",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-4-turbo",
+          "candidates": [
+            "azure-cognitive-services/gpt-4-turbo",
+            "azure/gpt-4-turbo",
+            "llmgateway/gpt-4-turbo",
+            "openai/gpt-4-turbo"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-4.1",
+          "modelId": "gpt-4.1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-4.1",
+          "candidates": [
+            "302ai/gpt-4.1",
+            "abacus/gpt-4.1",
+            "aihubmix/gpt-4.1",
+            "azure-cognitive-services/gpt-4.1",
+            "azure/gpt-4.1",
+            "cortecs/gpt-4.1",
+            "github-copilot/gpt-4.1",
+            "helicone/gpt-4.1",
+            "llmgateway/gpt-4.1",
+            "openai/gpt-4.1",
+            "sap-ai-core/gpt-4.1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-4.1-mini",
+          "modelId": "gpt-4.1-mini",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-4.1-mini",
+          "candidates": [
+            "302ai/gpt-4.1-mini",
+            "abacus/gpt-4.1-mini",
+            "aihubmix/gpt-4.1-mini",
+            "azure-cognitive-services/gpt-4.1-mini",
+            "azure/gpt-4.1-mini",
+            "helicone/gpt-4.1-mini",
+            "llmgateway/gpt-4.1-mini",
+            "openai/gpt-4.1-mini",
+            "sap-ai-core/gpt-4.1-mini"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-4.1-nano",
+          "modelId": "gpt-4.1-nano",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-4.1-nano",
+          "candidates": [
+            "302ai/gpt-4.1-nano",
+            "abacus/gpt-4.1-nano",
+            "aihubmix/gpt-4.1-nano",
+            "azure-cognitive-services/gpt-4.1-nano",
+            "azure/gpt-4.1-nano",
+            "helicone/gpt-4.1-nano",
+            "llmgateway/gpt-4.1-nano",
+            "openai/gpt-4.1-nano"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/o3",
+          "modelId": "o3",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/o3",
+          "candidates": [
+            "abacus/o3",
+            "azure-cognitive-services/o3",
+            "azure/o3",
+            "helicone/o3",
+            "jiekou/o3",
+            "llmgateway/o3",
+            "openai/o3"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/o3-mini",
+          "modelId": "o3-mini",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/o3-mini",
+          "candidates": [
+            "abacus/o3-mini",
+            "azure-cognitive-services/o3-mini",
+            "azure/o3-mini",
+            "helicone/o3-mini",
+            "jiekou/o3-mini",
+            "llmgateway/o3-mini",
+            "openai/o3-mini"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/o3-pro",
+          "modelId": "o3-pro",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/o3-pro",
+          "candidates": [
+            "abacus/o3-pro",
+            "helicone/o3-pro",
+            "openai/o3-pro"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/o4-mini",
+          "modelId": "o4-mini",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/o4-mini",
+          "candidates": [
+            "abacus/o4-mini",
+            "aihubmix/o4-mini",
+            "azure-cognitive-services/o4-mini",
+            "azure/o4-mini",
+            "helicone/o4-mini",
+            "jiekou/o4-mini",
+            "llmgateway/o4-mini",
+            "openai/o4-mini"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/o1",
+          "modelId": "o1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/o1",
+          "candidates": [
+            "azure-cognitive-services/o1",
+            "azure/o1",
+            "helicone/o1",
+            "llmgateway/o1",
+            "openai/o1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/o1-mini",
+          "modelId": "o1-mini",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/o1-mini",
+          "candidates": [
+            "azure-cognitive-services/o1-mini",
+            "azure/o1-mini",
+            "helicone/o1-mini",
+            "openai/o1-mini"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/text-embedding-3-large",
+          "modelId": "text-embedding-3-large",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/text-embedding-3-large",
+          "candidates": [
+            "azure-cognitive-services/text-embedding-3-large",
+            "azure/text-embedding-3-large",
+            "openai/text-embedding-3-large"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/text-embedding-3-small",
+          "modelId": "text-embedding-3-small",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/text-embedding-3-small",
+          "candidates": [
+            "azure-cognitive-services/text-embedding-3-small",
+            "azure/text-embedding-3-small",
+            "openai/text-embedding-3-small"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/text-embedding-ada-002",
+          "modelId": "text-embedding-ada-002",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/text-embedding-ada-002",
+          "candidates": [
+            "azure-cognitive-services/text-embedding-ada-002",
+            "azure/text-embedding-ada-002",
+            "openai/text-embedding-ada-002"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openai/tts-1",
+          "modelId": "tts-1",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "openai/tts-1-hd",
+          "modelId": "tts-1-hd",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "openai/gpt-4o-mini-tts",
+          "modelId": "gpt-4o-mini-tts",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        }
+      ]
+    },
+    {
+      "providerPrefix": "anthropic",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "anthropic"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "anthropic/claude-sonnet-4-20250514",
+          "modelId": "claude-sonnet-4-20250514",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "anthropic/claude-sonnet-4-20250514",
+          "candidates": [
+            "abacus/claude-sonnet-4-20250514",
+            "anthropic/claude-sonnet-4-20250514",
+            "jiekou/claude-sonnet-4-20250514",
+            "llmgateway/claude-sonnet-4-20250514",
+            "nano-gpt/claude-sonnet-4-20250514"
+          ]
+        },
+        {
+          "providerPrefixModelId": "anthropic/claude-opus-4-20250514",
+          "modelId": "claude-opus-4-20250514",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "anthropic/claude-opus-4-20250514",
+          "candidates": [
+            "abacus/claude-opus-4-20250514",
+            "anthropic/claude-opus-4-20250514",
+            "jiekou/claude-opus-4-20250514",
+            "llmgateway/claude-opus-4-20250514",
+            "nano-gpt/claude-opus-4-20250514"
+          ]
+        },
+        {
+          "providerPrefixModelId": "anthropic/claude-3-5-sonnet-20241022",
+          "modelId": "claude-3-5-sonnet-20241022",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "anthropic/claude-3-5-sonnet-20241022",
+          "candidates": [
+            "anthropic/claude-3-5-sonnet-20241022",
+            "llmgateway/claude-3-5-sonnet-20241022",
+            "nano-gpt/claude-3-5-sonnet-20241022"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "gemini",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "gemini"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "gemini/gemini-3.1-pro-preview",
+          "modelId": "gemini-3.1-pro-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-3.1-pro-preview",
+          "candidates": [
+            "abacus/gemini-3.1-pro-preview",
+            "github-copilot/gemini-3.1-pro-preview",
+            "google-vertex/gemini-3.1-pro-preview",
+            "google/gemini-3.1-pro-preview",
+            "llmgateway/gemini-3.1-pro-preview",
+            "vivgrid/gemini-3.1-pro-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gemini/gemini-3.1-flash-lite-preview",
+          "modelId": "gemini-3.1-flash-lite-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-3.1-flash-lite-preview",
+          "candidates": [
+            "abacus/gemini-3.1-flash-lite-preview",
+            "google/gemini-3.1-flash-lite-preview",
+            "llmgateway/gemini-3.1-flash-lite-preview",
+            "vivgrid/gemini-3.1-flash-lite-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gemini/gemini-3.1-flash-image-preview",
+          "modelId": "gemini-3.1-flash-image-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-3.1-flash-image-preview",
+          "candidates": [
+            "google/gemini-3.1-flash-image-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gemini/gemini-3-flash-preview",
+          "modelId": "gemini-3-flash-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-3-flash-preview",
+          "candidates": [
+            "302ai/gemini-3-flash-preview",
+            "abacus/gemini-3-flash-preview",
+            "firmware/gemini-3-flash-preview",
+            "github-copilot/gemini-3-flash-preview",
+            "google-vertex/gemini-3-flash-preview",
+            "google/gemini-3-flash-preview",
+            "jiekou/gemini-3-flash-preview",
+            "llmgateway/gemini-3-flash-preview",
+            "ollama-cloud/gemini-3-flash-preview",
+            "qihang-ai/gemini-3-flash-preview",
+            "venice/gemini-3-flash-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gemini/gemini-2.5-pro",
+          "modelId": "gemini-2.5-pro",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-2.5-pro",
+          "candidates": [
+            "302ai/gemini-2.5-pro",
+            "abacus/gemini-2.5-pro",
+            "aihubmix/gemini-2.5-pro",
+            "cortecs/gemini-2.5-pro",
+            "firmware/gemini-2.5-pro",
+            "github-copilot/gemini-2.5-pro",
+            "google-vertex/gemini-2.5-pro",
+            "google/gemini-2.5-pro",
+            "helicone/gemini-2.5-pro",
+            "jiekou/gemini-2.5-pro",
+            "llmgateway/gemini-2.5-pro",
+            "nano-gpt/gemini-2.5-pro",
+            "qiniu-ai/gemini-2.5-pro",
+            "sap-ai-core/gemini-2.5-pro"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gemini/gemini-2.5-flash",
+          "modelId": "gemini-2.5-flash",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-2.5-flash",
+          "candidates": [
+            "302ai/gemini-2.5-flash",
+            "abacus/gemini-2.5-flash",
+            "aihubmix/gemini-2.5-flash",
+            "firmware/gemini-2.5-flash",
+            "google-vertex/gemini-2.5-flash",
+            "google/gemini-2.5-flash",
+            "helicone/gemini-2.5-flash",
+            "jiekou/gemini-2.5-flash",
+            "llmgateway/gemini-2.5-flash",
+            "nano-gpt/gemini-2.5-flash",
+            "qihang-ai/gemini-2.5-flash",
+            "qiniu-ai/gemini-2.5-flash",
+            "sap-ai-core/gemini-2.5-flash"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gemini/gemini-2.5-flash-lite",
+          "modelId": "gemini-2.5-flash-lite",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-2.5-flash-lite",
+          "candidates": [
+            "google-vertex/gemini-2.5-flash-lite",
+            "google/gemini-2.5-flash-lite",
+            "helicone/gemini-2.5-flash-lite",
+            "jiekou/gemini-2.5-flash-lite",
+            "llmgateway/gemini-2.5-flash-lite",
+            "nano-gpt/gemini-2.5-flash-lite",
+            "qiniu-ai/gemini-2.5-flash-lite",
+            "sap-ai-core/gemini-2.5-flash-lite"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gemini/gemini-2.0-flash",
+          "modelId": "gemini-2.0-flash",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-2.0-flash",
+          "candidates": [
+            "google-vertex/gemini-2.0-flash",
+            "google/gemini-2.0-flash",
+            "llmgateway/gemini-2.0-flash",
+            "qiniu-ai/gemini-2.0-flash"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gemini/gemini-2.0-flash-lite",
+          "modelId": "gemini-2.0-flash-lite",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-2.0-flash-lite",
+          "candidates": [
+            "302ai/gemini-2.0-flash-lite",
+            "google-vertex/gemini-2.0-flash-lite",
+            "google/gemini-2.0-flash-lite",
+            "llmgateway/gemini-2.0-flash-lite",
+            "nano-gpt/gemini-2.0-flash-lite",
+            "qiniu-ai/gemini-2.0-flash-lite"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gemini/gemma-4-31b-it",
+          "modelId": "gemma-4-31b-it",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemma-4-31b-it",
+          "candidates": [
+            "google/gemma-4-31b-it"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gemini/gemini-embedding-2-preview",
+          "modelId": "gemini-embedding-2-preview",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "gemini/gemini-embedding-001",
+          "modelId": "gemini-embedding-001",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-embedding-001",
+          "candidates": [
+            "google-vertex/gemini-embedding-001",
+            "google/gemini-embedding-001"
+          ]
+        },
+        {
+          "providerPrefixModelId": "gemini/text-embedding-005",
+          "modelId": "text-embedding-005",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "gemini/text-embedding-004",
+          "modelId": "text-embedding-004",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        }
+      ]
+    },
+    {
+      "providerPrefix": "openrouter",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "openrouter"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "openrouter/openai/text-embedding-3-large",
+          "modelId": "openai/text-embedding-3-large",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "openai/text-embedding-3-large",
+          "candidates": [
+            "openai/text-embedding-3-large"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openrouter/openai/text-embedding-3-small",
+          "modelId": "openai/text-embedding-3-small",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "openai/text-embedding-3-small",
+          "candidates": [
+            "openai/text-embedding-3-small"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openrouter/openai/text-embedding-ada-002",
+          "modelId": "openai/text-embedding-ada-002",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "openai/text-embedding-ada-002",
+          "candidates": [
+            "openai/text-embedding-ada-002"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openrouter/qwen/qwen3-embedding-8b",
+          "modelId": "qwen/qwen3-embedding-8b",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "evroc/Qwen/Qwen3-Embedding-8B",
+            "huggingface/Qwen/Qwen3-Embedding-8B",
+            "nebius/Qwen/Qwen3-Embedding-8B"
+          ]
+        },
+        {
+          "providerPrefixModelId": "openrouter/perplexity/pplx-embed-v1-4b",
+          "modelId": "perplexity/pplx-embed-v1-4b",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "openrouter/perplexity/pplx-embed-v1-0.6b",
+          "modelId": "perplexity/pplx-embed-v1-0.6b",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "openrouter/nvidia/llama-nemotron-embed-vl-1b-v2:free",
+          "modelId": "nvidia/llama-nemotron-embed-vl-1b-v2:free",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "openrouter/openai/gpt-4o-mini-tts",
+          "modelId": "openai/gpt-4o-mini-tts",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "openrouter/openai/tts-1-hd",
+          "modelId": "openai/tts-1-hd",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "openrouter/openai/tts-1",
+          "modelId": "openai/tts-1",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        }
+      ]
+    },
+    {
+      "providerPrefix": "glm",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "glm"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "glm/glm-5.1",
+          "modelId": "glm-5.1",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/glm-5.1",
+            "alibaba-cn/glm-5.1",
+            "cortecs/glm-5.1",
+            "llmgateway/glm-5.1",
+            "ollama-cloud/glm-5.1",
+            "opencode-go/glm-5.1",
+            "opencode/glm-5.1",
+            "zai-coding-plan/glm-5.1",
+            "zai/glm-5.1",
+            "zhipuai-coding-plan/glm-5.1",
+            "zhipuai/glm-5.1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "glm/glm-5",
+          "modelId": "glm-5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/glm-5",
+            "alibaba-cn/glm-5",
+            "alibaba-coding-plan-cn/glm-5",
+            "alibaba-coding-plan/glm-5",
+            "cortecs/glm-5",
+            "digitalocean/glm-5",
+            "dinference/glm-5",
+            "llmgateway/glm-5",
+            "ollama-cloud/glm-5",
+            "opencode-go/glm-5",
+            "opencode/glm-5",
+            "tencent-coding-plan/glm-5",
+            "vivgrid/glm-5",
+            "zai-coding-plan/glm-5",
+            "zai/glm-5",
+            "zhipuai-coding-plan/glm-5",
+            "zhipuai/glm-5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "glm/glm-4.7",
+          "modelId": "glm-4.7",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "302ai/glm-4.7",
+            "aihubmix/glm-4.7",
+            "alibaba-coding-plan-cn/glm-4.7",
+            "alibaba-coding-plan/glm-4.7",
+            "cortecs/glm-4.7",
+            "dinference/glm-4.7",
+            "kuae-cloud-coding-plan/GLM-4.7",
+            "llmgateway/glm-4.7",
+            "moark/GLM-4.7",
+            "ollama-cloud/glm-4.7",
+            "opencode/glm-4.7",
+            "zai-coding-plan/glm-4.7",
+            "zai/glm-4.7",
+            "zhipuai-coding-plan/glm-4.7",
+            "zhipuai/glm-4.7"
+          ]
+        },
+        {
+          "providerPrefixModelId": "glm/glm-4.6v",
+          "modelId": "glm-4.6v",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "302ai/glm-4.6v",
+            "aihubmix/glm-4.6v",
+            "llmgateway/glm-4.6v",
+            "zai-coding-plan/glm-4.6v",
+            "zai/glm-4.6v",
+            "zhipuai-coding-plan/glm-4.6v",
+            "zhipuai/glm-4.6v"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "glm-cn",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "glm-cn"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "glm-cn/glm-5.1",
+          "modelId": "glm-5.1",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/glm-5.1",
+            "alibaba-cn/glm-5.1",
+            "cortecs/glm-5.1",
+            "llmgateway/glm-5.1",
+            "ollama-cloud/glm-5.1",
+            "opencode-go/glm-5.1",
+            "opencode/glm-5.1",
+            "zai-coding-plan/glm-5.1",
+            "zai/glm-5.1",
+            "zhipuai-coding-plan/glm-5.1",
+            "zhipuai/glm-5.1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "glm-cn/glm-5",
+          "modelId": "glm-5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/glm-5",
+            "alibaba-cn/glm-5",
+            "alibaba-coding-plan-cn/glm-5",
+            "alibaba-coding-plan/glm-5",
+            "cortecs/glm-5",
+            "digitalocean/glm-5",
+            "dinference/glm-5",
+            "llmgateway/glm-5",
+            "ollama-cloud/glm-5",
+            "opencode-go/glm-5",
+            "opencode/glm-5",
+            "tencent-coding-plan/glm-5",
+            "vivgrid/glm-5",
+            "zai-coding-plan/glm-5",
+            "zai/glm-5",
+            "zhipuai-coding-plan/glm-5",
+            "zhipuai/glm-5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "glm-cn/glm-4.7",
+          "modelId": "glm-4.7",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "302ai/glm-4.7",
+            "aihubmix/glm-4.7",
+            "alibaba-coding-plan-cn/glm-4.7",
+            "alibaba-coding-plan/glm-4.7",
+            "cortecs/glm-4.7",
+            "dinference/glm-4.7",
+            "kuae-cloud-coding-plan/GLM-4.7",
+            "llmgateway/glm-4.7",
+            "moark/GLM-4.7",
+            "ollama-cloud/glm-4.7",
+            "opencode/glm-4.7",
+            "zai-coding-plan/glm-4.7",
+            "zai/glm-4.7",
+            "zhipuai-coding-plan/glm-4.7",
+            "zhipuai/glm-4.7"
+          ]
+        },
+        {
+          "providerPrefixModelId": "glm-cn/glm-4.6",
+          "modelId": "glm-4.6",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "302ai/glm-4.6",
+            "helicone/glm-4.6",
+            "iflowcn/glm-4.6",
+            "llmgateway/glm-4.6",
+            "ollama-cloud/glm-4.6",
+            "opencode/glm-4.6",
+            "zai-coding-plan/glm-4.6",
+            "zai/glm-4.6",
+            "zhipuai-coding-plan/glm-4.6",
+            "zhipuai/glm-4.6"
+          ]
+        },
+        {
+          "providerPrefixModelId": "glm-cn/glm-4.5-air",
+          "modelId": "glm-4.5-air",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "cortecs/glm-4.5-air",
+            "llmgateway/glm-4.5-air",
+            "qiniu-ai/glm-4.5-air",
+            "zai-coding-plan/glm-4.5-air",
+            "zai/glm-4.5-air",
+            "zhipuai-coding-plan/glm-4.5-air",
+            "zhipuai/glm-4.5-air"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "kimi",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "kimi"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "kimi/kimi-k2.5",
+          "modelId": "kimi-k2.5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "abacus/kimi-k2.5",
+            "aihubmix/kimi-k2.5",
+            "alibaba-cn/kimi-k2.5",
+            "alibaba-coding-plan-cn/kimi-k2.5",
+            "alibaba-coding-plan/kimi-k2.5",
+            "azure-cognitive-services/kimi-k2.5",
+            "azure/kimi-k2.5",
+            "cortecs/kimi-k2.5",
+            "digitalocean/kimi-k2.5",
+            "firmware/kimi-k2.5",
+            "llmgateway/kimi-k2.5",
+            "moonshotai-cn/kimi-k2.5",
+            "moonshotai/kimi-k2.5",
+            "ollama-cloud/kimi-k2.5",
+            "opencode-go/kimi-k2.5",
+            "opencode/kimi-k2.5",
+            "tencent-coding-plan/kimi-k2.5",
+            "vultr/Kimi-K2.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "kimi/kimi-k2.5-thinking",
+          "modelId": "kimi-k2.5-thinking",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "kimi/kimi-latest",
+          "modelId": "kimi-latest",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        }
+      ]
+    },
+    {
+      "providerPrefix": "minimax",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "minimax"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "minimax/MiniMax-M2.7",
+          "modelId": "MiniMax-M2.7",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "minimax/MiniMax-M2.7",
+          "candidates": [
+            "cortecs/minimax-M2.7",
+            "llmgateway/minimax-m2.7",
+            "minimax-cn-coding-plan/MiniMax-M2.7",
+            "minimax-cn/MiniMax-M2.7",
+            "minimax-coding-plan/MiniMax-M2.7",
+            "minimax/MiniMax-M2.7",
+            "ollama-cloud/minimax-m2.7",
+            "opencode-go/minimax-m2.7"
+          ]
+        },
+        {
+          "providerPrefixModelId": "minimax/MiniMax-M2.5",
+          "modelId": "MiniMax-M2.5",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "minimax/MiniMax-M2.5",
+          "candidates": [
+            "aihubmix/minimax-m2.5",
+            "alibaba-cn/MiniMax-M2.5",
+            "alibaba-coding-plan-cn/MiniMax-M2.5",
+            "alibaba-coding-plan/MiniMax-M2.5",
+            "cortecs/minimax-m2.5",
+            "digitalocean/minimax-m2.5",
+            "llmgateway/minimax-m2.5",
+            "minimax-cn-coding-plan/MiniMax-M2.5",
+            "minimax-cn/MiniMax-M2.5",
+            "minimax-coding-plan/MiniMax-M2.5",
+            "minimax/MiniMax-M2.5",
+            "ollama-cloud/minimax-m2.5",
+            "opencode-go/minimax-m2.5",
+            "opencode/minimax-m2.5",
+            "tencent-coding-plan/minimax-m2.5",
+            "vultr/MiniMax-M2.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "minimax/MiniMax-M2.1",
+          "modelId": "MiniMax-M2.1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "minimax/MiniMax-M2.1",
+          "candidates": [
+            "302ai/MiniMax-M2.1",
+            "aihubmix/minimax-m2.1",
+            "cortecs/minimax-m2.1",
+            "llmgateway/minimax-m2.1",
+            "minimax-cn-coding-plan/MiniMax-M2.1",
+            "minimax-cn/MiniMax-M2.1",
+            "minimax-coding-plan/MiniMax-M2.1",
+            "minimax/MiniMax-M2.1",
+            "moark/MiniMax-M2.1",
+            "ollama-cloud/minimax-m2.1",
+            "opencode/minimax-m2.1"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "blackbox",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "blackbox"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "blackbox/gpt-4o",
+          "modelId": "gpt-4o",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-4o",
+          "candidates": [
+            "302ai/gpt-4o",
+            "aihubmix/gpt-4o",
+            "azure-cognitive-services/gpt-4o",
+            "azure/gpt-4o",
+            "firmware/gpt-4o",
+            "github-copilot/gpt-4o",
+            "helicone/gpt-4o",
+            "llmgateway/gpt-4o",
+            "openai/gpt-4o"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/gpt-4o-mini",
+          "modelId": "gpt-4o-mini",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/gpt-4o-mini",
+          "candidates": [
+            "abacus/gpt-4o-mini",
+            "azure-cognitive-services/gpt-4o-mini",
+            "azure/gpt-4o-mini",
+            "helicone/gpt-4o-mini",
+            "llmgateway/gpt-4o-mini",
+            "openai/gpt-4o-mini"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/claude-sonnet-4.6",
+          "modelId": "claude-sonnet-4.6",
+          "status": "matched",
+          "strategy": "suffix-unique",
+          "modelsDevId": "github-copilot/claude-sonnet-4.6",
+          "candidates": [
+            "github-copilot/claude-sonnet-4.6"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/claude-sonnet-4.5",
+          "modelId": "claude-sonnet-4.5",
+          "status": "matched",
+          "strategy": "suffix-unique",
+          "modelsDevId": "github-copilot/claude-sonnet-4.5",
+          "candidates": [
+            "github-copilot/claude-sonnet-4.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/claude-opus-4.6",
+          "modelId": "claude-opus-4.6",
+          "status": "matched",
+          "strategy": "suffix-unique",
+          "modelsDevId": "github-copilot/claude-opus-4.6",
+          "candidates": [
+            "github-copilot/claude-opus-4.6"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/claude-sonnet-4-6",
+          "modelId": "claude-sonnet-4-6",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "anthropic/claude-sonnet-4-6",
+          "candidates": [
+            "abacus/claude-sonnet-4-6",
+            "aihubmix/claude-sonnet-4-6",
+            "anthropic/claude-sonnet-4-6",
+            "firmware/claude-sonnet-4-6",
+            "llmgateway/claude-sonnet-4-6",
+            "opencode/claude-sonnet-4-6",
+            "venice/claude-sonnet-4-6"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/claude-opus-4-6",
+          "modelId": "claude-opus-4-6",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "anthropic/claude-opus-4-6",
+          "candidates": [
+            "abacus/claude-opus-4-6",
+            "aihubmix/claude-opus-4-6",
+            "anthropic/claude-opus-4-6",
+            "azure-cognitive-services/claude-opus-4-6",
+            "azure/claude-opus-4-6",
+            "firmware/claude-opus-4-6",
+            "jiekou/claude-opus-4-6",
+            "llmgateway/claude-opus-4-6",
+            "opencode/claude-opus-4-6",
+            "venice/claude-opus-4-6"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/deepseek-chat",
+          "modelId": "deepseek-chat",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "deepseek/deepseek-chat",
+          "candidates": [
+            "302ai/deepseek-chat",
+            "deepseek/deepseek-chat",
+            "nano-gpt/deepseek-chat"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/deepseek-v3-671b",
+          "modelId": "deepseek-v3-671b",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "blackbox/deepseek-r1",
+          "modelId": "deepseek-r1",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "alibaba-cn/deepseek-r1",
+            "azure-cognitive-services/deepseek-r1",
+            "azure/deepseek-r1",
+            "iflowcn/deepseek-r1",
+            "nano-gpt/deepseek-r1",
+            "qiniu-ai/deepseek-r1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/o1",
+          "modelId": "o1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/o1",
+          "candidates": [
+            "azure-cognitive-services/o1",
+            "azure/o1",
+            "helicone/o1",
+            "llmgateway/o1",
+            "openai/o1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/o3-mini",
+          "modelId": "o3-mini",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "openai/o3-mini",
+          "candidates": [
+            "abacus/o3-mini",
+            "azure-cognitive-services/o3-mini",
+            "azure/o3-mini",
+            "helicone/o3-mini",
+            "jiekou/o3-mini",
+            "llmgateway/o3-mini",
+            "openai/o3-mini"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/gemini-2.5-flash",
+          "modelId": "gemini-2.5-flash",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-2.5-flash",
+          "candidates": [
+            "302ai/gemini-2.5-flash",
+            "abacus/gemini-2.5-flash",
+            "aihubmix/gemini-2.5-flash",
+            "firmware/gemini-2.5-flash",
+            "google-vertex/gemini-2.5-flash",
+            "google/gemini-2.5-flash",
+            "helicone/gemini-2.5-flash",
+            "jiekou/gemini-2.5-flash",
+            "llmgateway/gemini-2.5-flash",
+            "nano-gpt/gemini-2.5-flash",
+            "qihang-ai/gemini-2.5-flash",
+            "qiniu-ai/gemini-2.5-flash",
+            "sap-ai-core/gemini-2.5-flash"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/gemini-3-flash-preview",
+          "modelId": "gemini-3-flash-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-3-flash-preview",
+          "candidates": [
+            "302ai/gemini-3-flash-preview",
+            "abacus/gemini-3-flash-preview",
+            "firmware/gemini-3-flash-preview",
+            "github-copilot/gemini-3-flash-preview",
+            "google-vertex/gemini-3-flash-preview",
+            "google/gemini-3-flash-preview",
+            "jiekou/gemini-3-flash-preview",
+            "llmgateway/gemini-3-flash-preview",
+            "ollama-cloud/gemini-3-flash-preview",
+            "qihang-ai/gemini-3-flash-preview",
+            "venice/gemini-3-flash-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/qwen3-coder-plus",
+          "modelId": "qwen3-coder-plus",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "alibaba-cn/qwen3-coder-plus",
+            "alibaba-coding-plan-cn/qwen3-coder-plus",
+            "alibaba-coding-plan/qwen3-coder-plus",
+            "alibaba/qwen3-coder-plus",
+            "iflowcn/qwen3-coder-plus",
+            "llmgateway/qwen3-coder-plus"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/qwen3-max",
+          "modelId": "qwen3-max",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "abacus/qwen3-max",
+            "alibaba-cn/qwen3-max",
+            "alibaba/qwen3-max",
+            "iflowcn/qwen3-max",
+            "llmgateway/qwen3-max",
+            "qiniu-ai/qwen3-max"
+          ]
+        },
+        {
+          "providerPrefixModelId": "blackbox/qwen3-vl-plus",
+          "modelId": "qwen3-vl-plus",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "alibaba-cn/qwen3-vl-plus",
+            "alibaba/qwen3-vl-plus",
+            "iflowcn/qwen3-vl-plus",
+            "llmgateway/qwen3-vl-plus"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "minimax-cn",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "minimax-cn"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "minimax-cn/MiniMax-M2.7",
+          "modelId": "MiniMax-M2.7",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "minimax/MiniMax-M2.7",
+          "candidates": [
+            "cortecs/minimax-M2.7",
+            "llmgateway/minimax-m2.7",
+            "minimax-cn-coding-plan/MiniMax-M2.7",
+            "minimax-cn/MiniMax-M2.7",
+            "minimax-coding-plan/MiniMax-M2.7",
+            "minimax/MiniMax-M2.7",
+            "ollama-cloud/minimax-m2.7",
+            "opencode-go/minimax-m2.7"
+          ]
+        },
+        {
+          "providerPrefixModelId": "minimax-cn/MiniMax-M2.5",
+          "modelId": "MiniMax-M2.5",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "minimax/MiniMax-M2.5",
+          "candidates": [
+            "aihubmix/minimax-m2.5",
+            "alibaba-cn/MiniMax-M2.5",
+            "alibaba-coding-plan-cn/MiniMax-M2.5",
+            "alibaba-coding-plan/MiniMax-M2.5",
+            "cortecs/minimax-m2.5",
+            "digitalocean/minimax-m2.5",
+            "llmgateway/minimax-m2.5",
+            "minimax-cn-coding-plan/MiniMax-M2.5",
+            "minimax-cn/MiniMax-M2.5",
+            "minimax-coding-plan/MiniMax-M2.5",
+            "minimax/MiniMax-M2.5",
+            "ollama-cloud/minimax-m2.5",
+            "opencode-go/minimax-m2.5",
+            "opencode/minimax-m2.5",
+            "tencent-coding-plan/minimax-m2.5",
+            "vultr/MiniMax-M2.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "minimax-cn/MiniMax-M2.1",
+          "modelId": "MiniMax-M2.1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "minimax/MiniMax-M2.1",
+          "candidates": [
+            "302ai/MiniMax-M2.1",
+            "aihubmix/minimax-m2.1",
+            "cortecs/minimax-m2.1",
+            "llmgateway/minimax-m2.1",
+            "minimax-cn-coding-plan/MiniMax-M2.1",
+            "minimax-cn/MiniMax-M2.1",
+            "minimax-coding-plan/MiniMax-M2.1",
+            "minimax/MiniMax-M2.1",
+            "moark/MiniMax-M2.1",
+            "ollama-cloud/minimax-m2.1",
+            "opencode/minimax-m2.1"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "alicode",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "alicode"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "alicode/qwen3.5-plus",
+          "modelId": "qwen3.5-plus",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "alibaba/qwen3.5-plus",
+          "candidates": [
+            "aihubmix/qwen3.5-plus",
+            "alibaba-cn/qwen3.5-plus",
+            "alibaba-coding-plan-cn/qwen3.5-plus",
+            "alibaba-coding-plan/qwen3.5-plus",
+            "alibaba/qwen3.5-plus",
+            "opencode-go/qwen3.5-plus",
+            "opencode/qwen3.5-plus"
+          ]
+        },
+        {
+          "providerPrefixModelId": "alicode/kimi-k2.5",
+          "modelId": "kimi-k2.5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "abacus/kimi-k2.5",
+            "aihubmix/kimi-k2.5",
+            "alibaba-cn/kimi-k2.5",
+            "alibaba-coding-plan-cn/kimi-k2.5",
+            "alibaba-coding-plan/kimi-k2.5",
+            "azure-cognitive-services/kimi-k2.5",
+            "azure/kimi-k2.5",
+            "cortecs/kimi-k2.5",
+            "digitalocean/kimi-k2.5",
+            "firmware/kimi-k2.5",
+            "llmgateway/kimi-k2.5",
+            "moonshotai-cn/kimi-k2.5",
+            "moonshotai/kimi-k2.5",
+            "ollama-cloud/kimi-k2.5",
+            "opencode-go/kimi-k2.5",
+            "opencode/kimi-k2.5",
+            "tencent-coding-plan/kimi-k2.5",
+            "vultr/Kimi-K2.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "alicode/glm-5",
+          "modelId": "glm-5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/glm-5",
+            "alibaba-cn/glm-5",
+            "alibaba-coding-plan-cn/glm-5",
+            "alibaba-coding-plan/glm-5",
+            "cortecs/glm-5",
+            "digitalocean/glm-5",
+            "dinference/glm-5",
+            "llmgateway/glm-5",
+            "ollama-cloud/glm-5",
+            "opencode-go/glm-5",
+            "opencode/glm-5",
+            "tencent-coding-plan/glm-5",
+            "vivgrid/glm-5",
+            "zai-coding-plan/glm-5",
+            "zai/glm-5",
+            "zhipuai-coding-plan/glm-5",
+            "zhipuai/glm-5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "alicode/MiniMax-M2.5",
+          "modelId": "MiniMax-M2.5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/minimax-m2.5",
+            "alibaba-cn/MiniMax-M2.5",
+            "alibaba-coding-plan-cn/MiniMax-M2.5",
+            "alibaba-coding-plan/MiniMax-M2.5",
+            "cortecs/minimax-m2.5",
+            "digitalocean/minimax-m2.5",
+            "llmgateway/minimax-m2.5",
+            "minimax-cn-coding-plan/MiniMax-M2.5",
+            "minimax-cn/MiniMax-M2.5",
+            "minimax-coding-plan/MiniMax-M2.5",
+            "minimax/MiniMax-M2.5",
+            "ollama-cloud/minimax-m2.5",
+            "opencode-go/minimax-m2.5",
+            "opencode/minimax-m2.5",
+            "tencent-coding-plan/minimax-m2.5",
+            "vultr/MiniMax-M2.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "alicode/qwen3-max-2026-01-23",
+          "modelId": "qwen3-max-2026-01-23",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/qwen3-max-2026-01-23",
+            "alibaba-coding-plan-cn/qwen3-max-2026-01-23",
+            "alibaba-coding-plan/qwen3-max-2026-01-23",
+            "llmgateway/qwen3-max-2026-01-23",
+            "nano-gpt/qwen3-max-2026-01-23"
+          ]
+        },
+        {
+          "providerPrefixModelId": "alicode/qwen3-coder-next",
+          "modelId": "qwen3-coder-next",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/qwen3-coder-next",
+            "alibaba-coding-plan-cn/qwen3-coder-next",
+            "alibaba-coding-plan/qwen3-coder-next",
+            "cortecs/qwen3-coder-next",
+            "llmgateway/qwen3-coder-next",
+            "ollama-cloud/qwen3-coder-next"
+          ]
+        },
+        {
+          "providerPrefixModelId": "alicode/qwen3-coder-plus",
+          "modelId": "qwen3-coder-plus",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "alibaba/qwen3-coder-plus",
+          "candidates": [
+            "alibaba-cn/qwen3-coder-plus",
+            "alibaba-coding-plan-cn/qwen3-coder-plus",
+            "alibaba-coding-plan/qwen3-coder-plus",
+            "alibaba/qwen3-coder-plus",
+            "iflowcn/qwen3-coder-plus",
+            "llmgateway/qwen3-coder-plus"
+          ]
+        },
+        {
+          "providerPrefixModelId": "alicode/glm-4.7",
+          "modelId": "glm-4.7",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "302ai/glm-4.7",
+            "aihubmix/glm-4.7",
+            "alibaba-coding-plan-cn/glm-4.7",
+            "alibaba-coding-plan/glm-4.7",
+            "cortecs/glm-4.7",
+            "dinference/glm-4.7",
+            "kuae-cloud-coding-plan/GLM-4.7",
+            "llmgateway/glm-4.7",
+            "moark/GLM-4.7",
+            "ollama-cloud/glm-4.7",
+            "opencode/glm-4.7",
+            "zai-coding-plan/glm-4.7",
+            "zai/glm-4.7",
+            "zhipuai-coding-plan/glm-4.7",
+            "zhipuai/glm-4.7"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "alicode-intl",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "alicode-intl"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "alicode-intl/qwen3.5-plus",
+          "modelId": "qwen3.5-plus",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "alibaba/qwen3.5-plus",
+          "candidates": [
+            "aihubmix/qwen3.5-plus",
+            "alibaba-cn/qwen3.5-plus",
+            "alibaba-coding-plan-cn/qwen3.5-plus",
+            "alibaba-coding-plan/qwen3.5-plus",
+            "alibaba/qwen3.5-plus",
+            "opencode-go/qwen3.5-plus",
+            "opencode/qwen3.5-plus"
+          ]
+        },
+        {
+          "providerPrefixModelId": "alicode-intl/kimi-k2.5",
+          "modelId": "kimi-k2.5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "abacus/kimi-k2.5",
+            "aihubmix/kimi-k2.5",
+            "alibaba-cn/kimi-k2.5",
+            "alibaba-coding-plan-cn/kimi-k2.5",
+            "alibaba-coding-plan/kimi-k2.5",
+            "azure-cognitive-services/kimi-k2.5",
+            "azure/kimi-k2.5",
+            "cortecs/kimi-k2.5",
+            "digitalocean/kimi-k2.5",
+            "firmware/kimi-k2.5",
+            "llmgateway/kimi-k2.5",
+            "moonshotai-cn/kimi-k2.5",
+            "moonshotai/kimi-k2.5",
+            "ollama-cloud/kimi-k2.5",
+            "opencode-go/kimi-k2.5",
+            "opencode/kimi-k2.5",
+            "tencent-coding-plan/kimi-k2.5",
+            "vultr/Kimi-K2.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "alicode-intl/glm-5",
+          "modelId": "glm-5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/glm-5",
+            "alibaba-cn/glm-5",
+            "alibaba-coding-plan-cn/glm-5",
+            "alibaba-coding-plan/glm-5",
+            "cortecs/glm-5",
+            "digitalocean/glm-5",
+            "dinference/glm-5",
+            "llmgateway/glm-5",
+            "ollama-cloud/glm-5",
+            "opencode-go/glm-5",
+            "opencode/glm-5",
+            "tencent-coding-plan/glm-5",
+            "vivgrid/glm-5",
+            "zai-coding-plan/glm-5",
+            "zai/glm-5",
+            "zhipuai-coding-plan/glm-5",
+            "zhipuai/glm-5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "alicode-intl/MiniMax-M2.5",
+          "modelId": "MiniMax-M2.5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/minimax-m2.5",
+            "alibaba-cn/MiniMax-M2.5",
+            "alibaba-coding-plan-cn/MiniMax-M2.5",
+            "alibaba-coding-plan/MiniMax-M2.5",
+            "cortecs/minimax-m2.5",
+            "digitalocean/minimax-m2.5",
+            "llmgateway/minimax-m2.5",
+            "minimax-cn-coding-plan/MiniMax-M2.5",
+            "minimax-cn/MiniMax-M2.5",
+            "minimax-coding-plan/MiniMax-M2.5",
+            "minimax/MiniMax-M2.5",
+            "ollama-cloud/minimax-m2.5",
+            "opencode-go/minimax-m2.5",
+            "opencode/minimax-m2.5",
+            "tencent-coding-plan/minimax-m2.5",
+            "vultr/MiniMax-M2.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "alicode-intl/qwen3-coder-next",
+          "modelId": "qwen3-coder-next",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/qwen3-coder-next",
+            "alibaba-coding-plan-cn/qwen3-coder-next",
+            "alibaba-coding-plan/qwen3-coder-next",
+            "cortecs/qwen3-coder-next",
+            "llmgateway/qwen3-coder-next",
+            "ollama-cloud/qwen3-coder-next"
+          ]
+        },
+        {
+          "providerPrefixModelId": "alicode-intl/qwen3-coder-plus",
+          "modelId": "qwen3-coder-plus",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "alibaba/qwen3-coder-plus",
+          "candidates": [
+            "alibaba-cn/qwen3-coder-plus",
+            "alibaba-coding-plan-cn/qwen3-coder-plus",
+            "alibaba-coding-plan/qwen3-coder-plus",
+            "alibaba/qwen3-coder-plus",
+            "iflowcn/qwen3-coder-plus",
+            "llmgateway/qwen3-coder-plus"
+          ]
+        },
+        {
+          "providerPrefixModelId": "alicode-intl/glm-4.7",
+          "modelId": "glm-4.7",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "302ai/glm-4.7",
+            "aihubmix/glm-4.7",
+            "alibaba-coding-plan-cn/glm-4.7",
+            "alibaba-coding-plan/glm-4.7",
+            "cortecs/glm-4.7",
+            "dinference/glm-4.7",
+            "kuae-cloud-coding-plan/GLM-4.7",
+            "llmgateway/glm-4.7",
+            "moark/GLM-4.7",
+            "ollama-cloud/glm-4.7",
+            "opencode/glm-4.7",
+            "zai-coding-plan/glm-4.7",
+            "zai/glm-4.7",
+            "zhipuai-coding-plan/glm-4.7",
+            "zhipuai/glm-4.7"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "deepseek",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "deepseek"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "deepseek/deepseek-chat",
+          "modelId": "deepseek-chat",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "deepseek/deepseek-chat",
+          "candidates": [
+            "302ai/deepseek-chat",
+            "deepseek/deepseek-chat",
+            "nano-gpt/deepseek-chat"
+          ]
+        },
+        {
+          "providerPrefixModelId": "deepseek/deepseek-reasoner",
+          "modelId": "deepseek-reasoner",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "deepseek/deepseek-reasoner",
+          "candidates": [
+            "302ai/deepseek-reasoner",
+            "deepseek/deepseek-reasoner",
+            "helicone/deepseek-reasoner",
+            "nano-gpt/deepseek-reasoner"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "groq",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "groq"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "groq/llama-3.3-70b-versatile",
+          "modelId": "llama-3.3-70b-versatile",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "groq/llama-3.3-70b-versatile",
+          "candidates": [
+            "abacus/llama-3.3-70b-versatile",
+            "groq/llama-3.3-70b-versatile",
+            "helicone/llama-3.3-70b-versatile"
+          ]
+        },
+        {
+          "providerPrefixModelId": "groq/meta-llama/llama-4-maverick-17b-128e-instruct",
+          "modelId": "meta-llama/llama-4-maverick-17b-128e-instruct",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "groq/meta-llama/llama-4-maverick-17b-128e-instruct",
+          "candidates": [
+            "groq/meta-llama/llama-4-maverick-17b-128e-instruct"
+          ]
+        },
+        {
+          "providerPrefixModelId": "groq/qwen/qwen3-32b",
+          "modelId": "qwen/qwen3-32b",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "groq/qwen/qwen3-32b",
+          "candidates": [
+            "abacus/Qwen/Qwen3-32B",
+            "chutes/Qwen/Qwen3-32B",
+            "groq/qwen/qwen3-32b",
+            "kilo/qwen/qwen3-32b",
+            "nebius/Qwen/Qwen3-32B",
+            "siliconflow-cn/Qwen/Qwen3-32B",
+            "siliconflow/Qwen/Qwen3-32B"
+          ]
+        },
+        {
+          "providerPrefixModelId": "groq/openai/gpt-oss-120b",
+          "modelId": "openai/gpt-oss-120b",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "groq/openai/gpt-oss-120b",
+          "candidates": [
+            "abacus/openai/gpt-oss-120b",
+            "baseten/openai/gpt-oss-120b",
+            "berget/openai/gpt-oss-120b",
+            "cloudferro-sherlock/openai/gpt-oss-120b",
+            "deepinfra/openai/gpt-oss-120b",
+            "evroc/openai/gpt-oss-120b",
+            "fastrouter/openai/gpt-oss-120b",
+            "groq/openai/gpt-oss-120b",
+            "io-net/openai/gpt-oss-120b",
+            "kilo/openai/gpt-oss-120b",
+            "nano-gpt/openai/gpt-oss-120b",
+            "nebius/openai/gpt-oss-120b",
+            "novita-ai/openai/gpt-oss-120b",
+            "nvidia/openai/gpt-oss-120b",
+            "openrouter/openai/gpt-oss-120b",
+            "siliconflow/openai/gpt-oss-120b",
+            "stackit/openai/gpt-oss-120b",
+            "submodel/openai/gpt-oss-120b",
+            "togetherai/openai/gpt-oss-120b",
+            "vercel/openai/gpt-oss-120b"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "xai",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "xai"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "xai/grok-4",
+          "modelId": "grok-4",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "xai/grok-4",
+          "candidates": [
+            "azure-cognitive-services/grok-4",
+            "azure/grok-4",
+            "helicone/grok-4",
+            "llmgateway/grok-4",
+            "xai/grok-4"
+          ]
+        },
+        {
+          "providerPrefixModelId": "xai/grok-4-fast-reasoning",
+          "modelId": "grok-4-fast-reasoning",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "302ai/grok-4-fast-reasoning",
+            "azure-cognitive-services/grok-4-fast-reasoning",
+            "azure/grok-4-fast-reasoning",
+            "helicone/grok-4-fast-reasoning",
+            "jiekou/grok-4-fast-reasoning",
+            "llmgateway/grok-4-fast-reasoning"
+          ]
+        },
+        {
+          "providerPrefixModelId": "xai/grok-code-fast-1",
+          "modelId": "grok-code-fast-1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "xai/grok-code-fast-1",
+          "candidates": [
+            "abacus/grok-code-fast-1",
+            "azure-cognitive-services/grok-code-fast-1",
+            "azure/grok-code-fast-1",
+            "firmware/grok-code-fast-1",
+            "github-copilot/grok-code-fast-1",
+            "helicone/grok-code-fast-1",
+            "jiekou/grok-code-fast-1",
+            "llmgateway/grok-code-fast-1",
+            "xai/grok-code-fast-1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "xai/grok-3",
+          "modelId": "grok-3",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "xai/grok-3",
+          "candidates": [
+            "azure-cognitive-services/grok-3",
+            "azure/grok-3",
+            "helicone/grok-3",
+            "llmgateway/grok-3",
+            "xai/grok-3"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "mistral",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "mistral"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "mistral/mistral-large-latest",
+          "modelId": "mistral-large-latest",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "mistral/mistral-large-latest",
+          "candidates": [
+            "llmgateway/mistral-large-latest",
+            "mistral/mistral-large-latest"
+          ]
+        },
+        {
+          "providerPrefixModelId": "mistral/codestral-latest",
+          "modelId": "codestral-latest",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "mistral/codestral-latest",
+          "candidates": [
+            "mistral/codestral-latest"
+          ]
+        },
+        {
+          "providerPrefixModelId": "mistral/mistral-medium-latest",
+          "modelId": "mistral-medium-latest",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "mistral/mistral-medium-latest",
+          "candidates": [
+            "mistral/mistral-medium-latest"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "perplexity",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "perplexity"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "perplexity/sonar-pro",
+          "modelId": "sonar-pro",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "perplexity/sonar-pro",
+          "candidates": [
+            "helicone/sonar-pro",
+            "llmgateway/sonar-pro",
+            "nano-gpt/sonar-pro",
+            "perplexity/sonar-pro",
+            "sap-ai-core/sonar-pro"
+          ]
+        },
+        {
+          "providerPrefixModelId": "perplexity/sonar",
+          "modelId": "sonar",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "perplexity/sonar",
+          "candidates": [
+            "helicone/sonar",
+            "llmgateway/sonar",
+            "nano-gpt/sonar",
+            "perplexity/sonar",
+            "sap-ai-core/sonar"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "together",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "together"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+          "modelId": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "deepinfra/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            "togetherai/meta-llama/Llama-3.3-70B-Instruct-Turbo"
+          ]
+        },
+        {
+          "providerPrefixModelId": "together/deepseek-ai/DeepSeek-R1",
+          "modelId": "deepseek-ai/DeepSeek-R1",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "abacus/deepseek-ai/DeepSeek-R1",
+            "nvidia/deepseek-ai/deepseek-r1",
+            "siliconflow-cn/deepseek-ai/DeepSeek-R1",
+            "siliconflow/deepseek-ai/DeepSeek-R1",
+            "togetherai/deepseek-ai/DeepSeek-R1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "together/Qwen/Qwen3-235B-A22B",
+          "modelId": "Qwen/Qwen3-235B-A22B",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "chutes/Qwen/Qwen3-235B-A22B",
+            "kilo/qwen/qwen3-235b-a22b",
+            "nvidia/qwen/qwen3-235b-a22b",
+            "siliconflow/Qwen/Qwen3-235B-A22B"
+          ]
+        },
+        {
+          "providerPrefixModelId": "together/meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
+          "modelId": "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "abacus/meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
+            "deepinfra/meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
+            "io-net/meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
+            "novita-ai/meta-llama/llama-4-maverick-17b-128e-instruct-fp8"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "fireworks",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "fireworks"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "fireworks/accounts/fireworks/models/deepseek-v3p1",
+          "modelId": "accounts/fireworks/models/deepseek-v3p1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "fireworks-ai/accounts/fireworks/models/deepseek-v3p1",
+          "candidates": [
+            "fireworks-ai/accounts/fireworks/models/deepseek-v3p1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "fireworks/accounts/fireworks/models/llama-v3p3-70b-instruct",
+          "modelId": "accounts/fireworks/models/llama-v3p3-70b-instruct",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "fireworks/accounts/fireworks/models/qwen3-235b-a22b",
+          "modelId": "accounts/fireworks/models/qwen3-235b-a22b",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        }
+      ]
+    },
+    {
+      "providerPrefix": "cerebras",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "cerebras"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "cerebras/gpt-oss-120b",
+          "modelId": "gpt-oss-120b",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "cerebras/gpt-oss-120b",
+          "candidates": [
+            "cerebras/gpt-oss-120b",
+            "cortecs/gpt-oss-120b",
+            "dinference/gpt-oss-120b",
+            "firmware/gpt-oss-120b",
+            "helicone/gpt-oss-120b",
+            "llmgateway/gpt-oss-120b",
+            "ovhcloud/gpt-oss-120b",
+            "privatemode-ai/gpt-oss-120b",
+            "qiniu-ai/gpt-oss-120b",
+            "scaleway/gpt-oss-120b",
+            "vultr/gpt-oss-120b"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cerebras/zai-glm-4.7",
+          "modelId": "zai-glm-4.7",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "cerebras/zai-glm-4.7",
+          "candidates": [
+            "cerebras/zai-glm-4.7"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cerebras/llama-3.3-70b",
+          "modelId": "llama-3.3-70b",
+          "status": "matched",
+          "strategy": "suffix-unique",
+          "modelsDevId": "venice/llama-3.3-70b",
+          "candidates": [
+            "venice/llama-3.3-70b"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cerebras/llama-4-scout-17b-16e-instruct",
+          "modelId": "llama-4-scout-17b-16e-instruct",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "azure-cognitive-services/llama-4-scout-17b-16e-instruct",
+            "azure/llama-4-scout-17b-16e-instruct"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cerebras/qwen-3-235b-a22b-instruct-2507",
+          "modelId": "qwen-3-235b-a22b-instruct-2507",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "cerebras/qwen-3-235b-a22b-instruct-2507",
+          "candidates": [
+            "cerebras/qwen-3-235b-a22b-instruct-2507"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cerebras/qwen-3-32b",
+          "modelId": "qwen-3-32b",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        }
+      ]
+    },
+    {
+      "providerPrefix": "cohere",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "cohere"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "cohere/command-r-plus-08-2024",
+          "modelId": "command-r-plus-08-2024",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "cohere/command-r-plus-08-2024",
+          "candidates": [
+            "cohere/command-r-plus-08-2024"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cohere/command-r-08-2024",
+          "modelId": "command-r-08-2024",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "cohere/command-r-08-2024",
+          "candidates": [
+            "cohere/command-r-08-2024"
+          ]
+        },
+        {
+          "providerPrefixModelId": "cohere/command-a-03-2025",
+          "modelId": "command-a-03-2025",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "cohere/command-a-03-2025",
+          "candidates": [
+            "cohere/command-a-03-2025"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "nvidia",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "nvidia"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "nvidia/moonshotai/kimi-k2.5",
+          "modelId": "moonshotai/kimi-k2.5",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "moonshotai/kimi-k2.5",
+          "candidates": [
+            "moonshotai/kimi-k2.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "nvidia/z-ai/glm4.7",
+          "modelId": "z-ai/glm4.7",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "nvidia/z-ai/glm4.7",
+          "candidates": [
+            "nvidia/z-ai/glm4.7"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "nebius",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "nebius"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "nebius/meta-llama/Llama-3.3-70B-Instruct",
+          "modelId": "meta-llama/Llama-3.3-70B-Instruct",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "nebius/meta-llama/Llama-3.3-70B-Instruct",
+          "candidates": [
+            "berget/meta-llama/Llama-3.3-70B-Instruct",
+            "cloudferro-sherlock/meta-llama/Llama-3.3-70B-Instruct",
+            "friendli/meta-llama/Llama-3.3-70B-Instruct",
+            "io-net/meta-llama/Llama-3.3-70B-Instruct",
+            "kilo/meta-llama/llama-3.3-70b-instruct",
+            "meganova/meta-llama/Llama-3.3-70B-Instruct",
+            "nano-gpt/meta-llama/llama-3.3-70b-instruct",
+            "nebius/meta-llama/Llama-3.3-70B-Instruct",
+            "novita-ai/meta-llama/llama-3.3-70b-instruct",
+            "wandb/meta-llama/Llama-3.3-70B-Instruct"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "siliconflow",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "siliconflow"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "siliconflow/deepseek-ai/DeepSeek-V3.2",
+          "modelId": "deepseek-ai/DeepSeek-V3.2",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "siliconflow/deepseek-ai/DeepSeek-V3.2",
+          "candidates": [
+            "abacus/deepseek-ai/DeepSeek-V3.2",
+            "baseten/deepseek-ai/DeepSeek-V3.2",
+            "deepinfra/deepseek-ai/DeepSeek-V3.2",
+            "huggingface/deepseek-ai/DeepSeek-V3.2",
+            "meganova/deepseek-ai/DeepSeek-V3.2",
+            "nebius/deepseek-ai/DeepSeek-V3.2",
+            "nvidia/deepseek-ai/deepseek-v3.2",
+            "siliconflow-cn/deepseek-ai/DeepSeek-V3.2",
+            "siliconflow/deepseek-ai/DeepSeek-V3.2"
+          ]
+        },
+        {
+          "providerPrefixModelId": "siliconflow/deepseek-ai/DeepSeek-V3.1",
+          "modelId": "deepseek-ai/DeepSeek-V3.1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "siliconflow/deepseek-ai/DeepSeek-V3.1",
+          "candidates": [
+            "baseten/deepseek-ai/DeepSeek-V3.1",
+            "meganova/deepseek-ai/DeepSeek-V3.1",
+            "nano-gpt/deepseek-ai/DeepSeek-V3.1",
+            "nvidia/deepseek-ai/deepseek-v3.1",
+            "siliconflow/deepseek-ai/DeepSeek-V3.1",
+            "submodel/deepseek-ai/DeepSeek-V3.1",
+            "wandb/deepseek-ai/DeepSeek-V3.1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "siliconflow/deepseek-ai/DeepSeek-R1",
+          "modelId": "deepseek-ai/DeepSeek-R1",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "siliconflow/deepseek-ai/DeepSeek-R1",
+          "candidates": [
+            "abacus/deepseek-ai/DeepSeek-R1",
+            "nvidia/deepseek-ai/deepseek-r1",
+            "siliconflow-cn/deepseek-ai/DeepSeek-R1",
+            "siliconflow/deepseek-ai/DeepSeek-R1",
+            "togetherai/deepseek-ai/DeepSeek-R1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "siliconflow/Qwen/Qwen3-235B-A22B-Instruct-2507",
+          "modelId": "Qwen/Qwen3-235B-A22B-Instruct-2507",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "siliconflow/Qwen/Qwen3-235B-A22B-Instruct-2507",
+          "candidates": [
+            "abacus/Qwen/Qwen3-235B-A22B-Instruct-2507",
+            "friendli/Qwen/Qwen3-235B-A22B-Instruct-2507",
+            "jiekou/qwen/qwen3-235b-a22b-instruct-2507",
+            "meganova/Qwen/Qwen3-235B-A22B-Instruct-2507",
+            "modelscope/Qwen/Qwen3-235B-A22B-Instruct-2507",
+            "nebius/Qwen/Qwen3-235B-A22B-Instruct-2507",
+            "novita-ai/qwen/qwen3-235b-a22b-instruct-2507",
+            "siliconflow-cn/Qwen/Qwen3-235B-A22B-Instruct-2507",
+            "siliconflow/Qwen/Qwen3-235B-A22B-Instruct-2507",
+            "submodel/Qwen/Qwen3-235B-A22B-Instruct-2507",
+            "wandb/Qwen/Qwen3-235B-A22B-Instruct-2507"
+          ]
+        },
+        {
+          "providerPrefixModelId": "siliconflow/Qwen/Qwen3-Coder-480B-A35B-Instruct",
+          "modelId": "Qwen/Qwen3-Coder-480B-A35B-Instruct",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "siliconflow/Qwen/Qwen3-Coder-480B-A35B-Instruct",
+          "candidates": [
+            "abacus/Qwen/qwen3-coder-480b-a35b-instruct",
+            "deepinfra/Qwen/Qwen3-Coder-480B-A35B-Instruct",
+            "huggingface/Qwen/Qwen3-Coder-480B-A35B-Instruct",
+            "jiekou/qwen/qwen3-coder-480b-a35b-instruct",
+            "nebius/Qwen/Qwen3-Coder-480B-A35B-Instruct",
+            "novita-ai/qwen/qwen3-coder-480b-a35b-instruct",
+            "nvidia/qwen/qwen3-coder-480b-a35b-instruct",
+            "siliconflow-cn/Qwen/Qwen3-Coder-480B-A35B-Instruct",
+            "siliconflow/Qwen/Qwen3-Coder-480B-A35B-Instruct",
+            "wandb/Qwen/Qwen3-Coder-480B-A35B-Instruct"
+          ]
+        },
+        {
+          "providerPrefixModelId": "siliconflow/Qwen/Qwen3-32B",
+          "modelId": "Qwen/Qwen3-32B",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "siliconflow/Qwen/Qwen3-32B",
+          "candidates": [
+            "abacus/Qwen/Qwen3-32B",
+            "chutes/Qwen/Qwen3-32B",
+            "groq/qwen/qwen3-32b",
+            "kilo/qwen/qwen3-32b",
+            "nebius/Qwen/Qwen3-32B",
+            "siliconflow-cn/Qwen/Qwen3-32B",
+            "siliconflow/Qwen/Qwen3-32B"
+          ]
+        },
+        {
+          "providerPrefixModelId": "siliconflow/moonshotai/Kimi-K2.5",
+          "modelId": "moonshotai/Kimi-K2.5",
+          "status": "matched",
+          "strategy": "full-id",
+          "modelsDevId": "moonshotai/kimi-k2.5",
+          "candidates": [
+            "moonshotai/kimi-k2.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "siliconflow/zai-org/GLM-4.7",
+          "modelId": "zai-org/GLM-4.7",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "siliconflow/zai-org/GLM-4.7",
+          "candidates": [
+            "abacus/zai-org/glm-4.7",
+            "baseten/zai-org/GLM-4.7",
+            "berget/zai-org/GLM-4.7",
+            "deepinfra/zai-org/GLM-4.7",
+            "huggingface/zai-org/GLM-4.7",
+            "jiekou/zai-org/glm-4.7",
+            "meganova/zai-org/GLM-4.7",
+            "nano-gpt/zai-org/glm-4.7",
+            "novita-ai/zai-org/glm-4.7",
+            "siliconflow/zai-org/GLM-4.7"
+          ]
+        },
+        {
+          "providerPrefixModelId": "siliconflow/openai/gpt-oss-120b",
+          "modelId": "openai/gpt-oss-120b",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "siliconflow/openai/gpt-oss-120b",
+          "candidates": [
+            "abacus/openai/gpt-oss-120b",
+            "baseten/openai/gpt-oss-120b",
+            "berget/openai/gpt-oss-120b",
+            "cloudferro-sherlock/openai/gpt-oss-120b",
+            "deepinfra/openai/gpt-oss-120b",
+            "evroc/openai/gpt-oss-120b",
+            "fastrouter/openai/gpt-oss-120b",
+            "groq/openai/gpt-oss-120b",
+            "io-net/openai/gpt-oss-120b",
+            "kilo/openai/gpt-oss-120b",
+            "nano-gpt/openai/gpt-oss-120b",
+            "nebius/openai/gpt-oss-120b",
+            "novita-ai/openai/gpt-oss-120b",
+            "nvidia/openai/gpt-oss-120b",
+            "openrouter/openai/gpt-oss-120b",
+            "siliconflow/openai/gpt-oss-120b",
+            "stackit/openai/gpt-oss-120b",
+            "submodel/openai/gpt-oss-120b",
+            "togetherai/openai/gpt-oss-120b",
+            "vercel/openai/gpt-oss-120b"
+          ]
+        },
+        {
+          "providerPrefixModelId": "siliconflow/baidu/ERNIE-4.5-300B-A47B",
+          "modelId": "baidu/ERNIE-4.5-300B-A47B",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "siliconflow/baidu/ERNIE-4.5-300B-A47B",
+          "candidates": [
+            "kilo/baidu/ernie-4.5-300b-a47b",
+            "nano-gpt/baidu/ernie-4.5-300b-a47b",
+            "siliconflow-cn/baidu/ERNIE-4.5-300B-A47B",
+            "siliconflow/baidu/ERNIE-4.5-300B-A47B"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "hyperbolic",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "hyperbolic"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "hyperbolic/Qwen/QwQ-32B",
+          "modelId": "Qwen/QwQ-32B",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "abacus/Qwen/QwQ-32B",
+            "kilo/qwen/qwq-32b",
+            "nvidia/qwen/qwq-32b",
+            "siliconflow-cn/Qwen/QwQ-32B",
+            "siliconflow/Qwen/QwQ-32B"
+          ]
+        },
+        {
+          "providerPrefixModelId": "hyperbolic/deepseek-ai/DeepSeek-R1",
+          "modelId": "deepseek-ai/DeepSeek-R1",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "abacus/deepseek-ai/DeepSeek-R1",
+            "nvidia/deepseek-ai/deepseek-r1",
+            "siliconflow-cn/deepseek-ai/DeepSeek-R1",
+            "siliconflow/deepseek-ai/DeepSeek-R1",
+            "togetherai/deepseek-ai/DeepSeek-R1"
+          ]
+        },
+        {
+          "providerPrefixModelId": "hyperbolic/deepseek-ai/DeepSeek-V3",
+          "modelId": "deepseek-ai/DeepSeek-V3",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "chutes/deepseek-ai/DeepSeek-V3",
+            "siliconflow-cn/deepseek-ai/DeepSeek-V3",
+            "siliconflow/deepseek-ai/DeepSeek-V3",
+            "togetherai/deepseek-ai/DeepSeek-V3"
+          ]
+        },
+        {
+          "providerPrefixModelId": "hyperbolic/meta-llama/Llama-3.3-70B-Instruct",
+          "modelId": "meta-llama/Llama-3.3-70B-Instruct",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "berget/meta-llama/Llama-3.3-70B-Instruct",
+            "cloudferro-sherlock/meta-llama/Llama-3.3-70B-Instruct",
+            "friendli/meta-llama/Llama-3.3-70B-Instruct",
+            "io-net/meta-llama/Llama-3.3-70B-Instruct",
+            "kilo/meta-llama/llama-3.3-70b-instruct",
+            "meganova/meta-llama/Llama-3.3-70B-Instruct",
+            "nano-gpt/meta-llama/llama-3.3-70b-instruct",
+            "nebius/meta-llama/Llama-3.3-70B-Instruct",
+            "novita-ai/meta-llama/llama-3.3-70b-instruct",
+            "wandb/meta-llama/Llama-3.3-70B-Instruct"
+          ]
+        },
+        {
+          "providerPrefixModelId": "hyperbolic/meta-llama/Llama-3.2-3B-Instruct",
+          "modelId": "meta-llama/Llama-3.2-3B-Instruct",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "kilo/meta-llama/llama-3.2-3b-instruct",
+            "nano-gpt/meta-llama/llama-3.2-3b-instruct"
+          ]
+        },
+        {
+          "providerPrefixModelId": "hyperbolic/Qwen/Qwen2.5-72B-Instruct",
+          "modelId": "Qwen/Qwen2.5-72B-Instruct",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "abacus/Qwen/Qwen2.5-72B-Instruct",
+            "chutes/Qwen/Qwen2.5-72B-Instruct",
+            "siliconflow-cn/Qwen/Qwen2.5-72B-Instruct",
+            "siliconflow/Qwen/Qwen2.5-72B-Instruct"
+          ]
+        },
+        {
+          "providerPrefixModelId": "hyperbolic/Qwen/Qwen2.5-Coder-32B-Instruct",
+          "modelId": "Qwen/Qwen2.5-Coder-32B-Instruct",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "chutes/Qwen/Qwen2.5-Coder-32B-Instruct",
+            "nvidia/qwen/qwen2.5-coder-32b-instruct",
+            "siliconflow-cn/Qwen/Qwen2.5-Coder-32B-Instruct",
+            "siliconflow/Qwen/Qwen2.5-Coder-32B-Instruct"
+          ]
+        },
+        {
+          "providerPrefixModelId": "hyperbolic/NousResearch/Hermes-3-Llama-3.1-70B",
+          "modelId": "NousResearch/Hermes-3-Llama-3.1-70B",
+          "status": "matched",
+          "strategy": "suffix-unique",
+          "modelsDevId": "kilo/nousresearch/hermes-3-llama-3.1-70b",
+          "candidates": [
+            "kilo/nousresearch/hermes-3-llama-3.1-70b"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "ollama",
+      "source": {
+        "type": "provider-id-or-alias",
+        "inferredProviderId": "ollama"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "ollama/gpt-oss:120b",
+          "modelId": "gpt-oss:120b",
+          "status": "matched",
+          "strategy": "suffix-unique",
+          "modelsDevId": "ollama-cloud/gpt-oss:120b",
+          "candidates": [
+            "ollama-cloud/gpt-oss:120b"
+          ]
+        },
+        {
+          "providerPrefixModelId": "ollama/kimi-k2.5",
+          "modelId": "kimi-k2.5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "abacus/kimi-k2.5",
+            "aihubmix/kimi-k2.5",
+            "alibaba-cn/kimi-k2.5",
+            "alibaba-coding-plan-cn/kimi-k2.5",
+            "alibaba-coding-plan/kimi-k2.5",
+            "azure-cognitive-services/kimi-k2.5",
+            "azure/kimi-k2.5",
+            "cortecs/kimi-k2.5",
+            "digitalocean/kimi-k2.5",
+            "firmware/kimi-k2.5",
+            "llmgateway/kimi-k2.5",
+            "moonshotai-cn/kimi-k2.5",
+            "moonshotai/kimi-k2.5",
+            "ollama-cloud/kimi-k2.5",
+            "opencode-go/kimi-k2.5",
+            "opencode/kimi-k2.5",
+            "tencent-coding-plan/kimi-k2.5",
+            "vultr/Kimi-K2.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "ollama/glm-5",
+          "modelId": "glm-5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/glm-5",
+            "alibaba-cn/glm-5",
+            "alibaba-coding-plan-cn/glm-5",
+            "alibaba-coding-plan/glm-5",
+            "cortecs/glm-5",
+            "digitalocean/glm-5",
+            "dinference/glm-5",
+            "llmgateway/glm-5",
+            "ollama-cloud/glm-5",
+            "opencode-go/glm-5",
+            "opencode/glm-5",
+            "tencent-coding-plan/glm-5",
+            "vivgrid/glm-5",
+            "zai-coding-plan/glm-5",
+            "zai/glm-5",
+            "zhipuai-coding-plan/glm-5",
+            "zhipuai/glm-5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "ollama/minimax-m2.5",
+          "modelId": "minimax-m2.5",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "aihubmix/minimax-m2.5",
+            "alibaba-cn/MiniMax-M2.5",
+            "alibaba-coding-plan-cn/MiniMax-M2.5",
+            "alibaba-coding-plan/MiniMax-M2.5",
+            "cortecs/minimax-m2.5",
+            "digitalocean/minimax-m2.5",
+            "llmgateway/minimax-m2.5",
+            "minimax-cn-coding-plan/MiniMax-M2.5",
+            "minimax-cn/MiniMax-M2.5",
+            "minimax-coding-plan/MiniMax-M2.5",
+            "minimax/MiniMax-M2.5",
+            "ollama-cloud/minimax-m2.5",
+            "opencode-go/minimax-m2.5",
+            "opencode/minimax-m2.5",
+            "tencent-coding-plan/minimax-m2.5",
+            "vultr/MiniMax-M2.5"
+          ]
+        },
+        {
+          "providerPrefixModelId": "ollama/glm-4.7-flash",
+          "modelId": "glm-4.7-flash",
+          "status": "ambiguous",
+          "strategy": "suffix-ambiguous",
+          "modelsDevId": null,
+          "candidates": [
+            "cortecs/glm-4.7-flash",
+            "llmgateway/glm-4.7-flash",
+            "zai-coding-plan/glm-4.7-flash",
+            "zai/glm-4.7-flash",
+            "zhipuai-coding-plan/glm-4.7-flash",
+            "zhipuai/glm-4.7-flash"
+          ]
+        },
+        {
+          "providerPrefixModelId": "ollama/qwen3.5",
+          "modelId": "qwen3.5",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        }
+      ]
+    },
+    {
+      "providerPrefix": "vertex",
+      "source": {
+        "type": "oauth-alias",
+        "inferredProviderId": "vertex"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "vertex/gemini-3.1-pro-preview",
+          "modelId": "gemini-3.1-pro-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-3.1-pro-preview",
+          "candidates": [
+            "abacus/gemini-3.1-pro-preview",
+            "github-copilot/gemini-3.1-pro-preview",
+            "google-vertex/gemini-3.1-pro-preview",
+            "google/gemini-3.1-pro-preview",
+            "llmgateway/gemini-3.1-pro-preview",
+            "vivgrid/gemini-3.1-pro-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "vertex/gemini-3.1-flash-lite-preview",
+          "modelId": "gemini-3.1-flash-lite-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-3.1-flash-lite-preview",
+          "candidates": [
+            "abacus/gemini-3.1-flash-lite-preview",
+            "google/gemini-3.1-flash-lite-preview",
+            "llmgateway/gemini-3.1-flash-lite-preview",
+            "vivgrid/gemini-3.1-flash-lite-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "vertex/gemini-3-flash-preview",
+          "modelId": "gemini-3-flash-preview",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-3-flash-preview",
+          "candidates": [
+            "302ai/gemini-3-flash-preview",
+            "abacus/gemini-3-flash-preview",
+            "firmware/gemini-3-flash-preview",
+            "github-copilot/gemini-3-flash-preview",
+            "google-vertex/gemini-3-flash-preview",
+            "google/gemini-3-flash-preview",
+            "jiekou/gemini-3-flash-preview",
+            "llmgateway/gemini-3-flash-preview",
+            "ollama-cloud/gemini-3-flash-preview",
+            "qihang-ai/gemini-3-flash-preview",
+            "venice/gemini-3-flash-preview"
+          ]
+        },
+        {
+          "providerPrefixModelId": "vertex/gemini-2.5-flash",
+          "modelId": "gemini-2.5-flash",
+          "status": "matched",
+          "strategy": "suffix-preferred-provider",
+          "modelsDevId": "google/gemini-2.5-flash",
+          "candidates": [
+            "302ai/gemini-2.5-flash",
+            "abacus/gemini-2.5-flash",
+            "aihubmix/gemini-2.5-flash",
+            "firmware/gemini-2.5-flash",
+            "google-vertex/gemini-2.5-flash",
+            "google/gemini-2.5-flash",
+            "helicone/gemini-2.5-flash",
+            "jiekou/gemini-2.5-flash",
+            "llmgateway/gemini-2.5-flash",
+            "nano-gpt/gemini-2.5-flash",
+            "qihang-ai/gemini-2.5-flash",
+            "qiniu-ai/gemini-2.5-flash",
+            "sap-ai-core/gemini-2.5-flash"
+          ]
+        }
+      ]
+    },
+    {
+      "providerPrefix": "vertex-partner",
+      "source": {
+        "type": "oauth-alias",
+        "inferredProviderId": "vertex-partner"
+      },
+      "models": [
+        {
+          "providerPrefixModelId": "vertex-partner/deepseek-ai/deepseek-v3.2-maas",
+          "modelId": "deepseek-ai/deepseek-v3.2-maas",
+          "status": "matched",
+          "strategy": "suffix-unique",
+          "modelsDevId": "google-vertex/deepseek-ai/deepseek-v3.2-maas",
+          "candidates": [
+            "google-vertex/deepseek-ai/deepseek-v3.2-maas"
+          ]
+        },
+        {
+          "providerPrefixModelId": "vertex-partner/qwen/qwen3-next-80b-a3b-thinking-maas",
+          "modelId": "qwen/qwen3-next-80b-a3b-thinking-maas",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "vertex-partner/qwen/qwen3-next-80b-a3b-instruct-maas",
+          "modelId": "qwen/qwen3-next-80b-a3b-instruct-maas",
+          "status": "unmatched",
+          "strategy": "none",
+          "modelsDevId": null,
+          "candidates": []
+        },
+        {
+          "providerPrefixModelId": "vertex-partner/zai-org/glm-5-maas",
+          "modelId": "zai-org/glm-5-maas",
+          "status": "matched",
+          "strategy": "suffix-unique",
+          "modelsDevId": "google-vertex/zai-org/glm-5-maas",
+          "candidates": [
+            "google-vertex/zai-org/glm-5-maas"
+          ]
+        }
+      ]
+    }
+  ]
+}
