@@ -74,6 +74,24 @@ const customPlugin = createOpenAICompatibleModelsPlugin({
 });
 ```
 
+## Interactive login prompts (`/connect` / `opencode auth login`)
+
+When you log in with the plugin provider (`myopenai` by default), OpenCode will prompt for:
+
+- API key (built-in API auth prompt)
+- Base URL (plugin auth prompt)
+
+The base URL is persisted to:
+
+- `~/.config/opencode/opencode-9router-plugin.<providerId>.json`
+
+At runtime, base URL resolution order is:
+
+1. `provider.api`
+2. `provider.baseURL`
+3. persisted base URL from login prompt
+4. `defaultBaseURL` plugin option
+
 ## Capability defaults
 
 OpenAI-compatible `/models` responses do not expose full capability metadata.

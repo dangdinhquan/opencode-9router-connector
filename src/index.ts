@@ -1,3 +1,7 @@
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
 export interface RouterPluginOptions {
   providerId?: string;
   defaultBaseURL?: string;
@@ -32,12 +36,35 @@ export interface ProviderConfig {
 
 export interface AuthHook {
   provider: string;
-  loader: () => Promise<{ apiKey: string }>;
+  loader: (
+    getAuth: () => Promise<{ type?: string; key?: string }>,
+    provider: ProviderConfig
+  ) => Promise<{ apiKey: string; baseURL: string }>;
+  methods: Array<{
+    type: "api";
+    label: string;
+    prompts: Array<{
+      type: "text";
+      key: "baseURL";
+      message: string;
+      placeholder: string;
+      validate: (value: string) => string | undefined;
+    }>;
+    authorize: (inputs?: Record<string, string>) => Promise<{
+      type: "success";
+      key?: string;
+      provider?: string;
+    }>;
+  }>;
 }
 
 export interface Hooks {
   provider: {
-    models: (provider: ProviderConfig) => Promise<Record<string, OpenCodeModel>>;
+    id: string;
+    models: (
+      provider: ProviderConfig,
+      context?: { auth?: { type?: string; key?: string } }
+    ) => Promise<Record<string, OpenCodeModel>>;
   };
   auth: AuthHook;
 }
@@ -64,6 +91,10 @@ const DEFAULT_OPTIONS: Required<
   apiKeyEnvName: "MYOPENAI_API_KEY",
   defaultContextWindow: 128000,
   defaultMaxOutputTokens: 8192
+};
+
+type PluginSettings = {
+  baseURL?: string;
 };
 
 function normalizeModelsURL(baseURL: string): string {
@@ -142,6 +173,102 @@ function regexPass(regex: RegExp | undefined, value: string): boolean {
   return regex.test(value);
 }
 
+function normalizeBaseURLInput(value: string): string {
+  let out = value.trim();
+  while (out.endsWith("/")) {
+    out = out.slice(0, -1);
+  }
+  return out;
+}
+
+function validateBaseURL(value: string): string | undefined {
+  const normalized = normalizeBaseURLInput(value);
+  if (!normalized) {
+    return "Base URL is required";
+  }
+
+  try {
+    const url = new URL(normalized);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return "Base URL must use http or https";
+    }
+  } catch {
+    return "Base URL is invalid";
+  }
+
+  return undefined;
+}
+
+function settingsFilePath(providerId: string): string {
+  return path.join(os.homedir(), ".config", "opencode", `opencode-9router-plugin.${providerId}.json`);
+}
+
+async function readSettings(providerId: string): Promise<PluginSettings> {
+  const file = settingsFilePath(providerId);
+  try {
+    const raw = await readFile(file, "utf8");
+    const parsed = JSON.parse(raw) as PluginSettings;
+    if (!parsed || typeof parsed !== "object") {
+      return {};
+    }
+    return parsed;
+  } catch {
+    return {};
+  }
+}
+
+async function writeSettings(providerId: string, patch: PluginSettings): Promise<void> {
+  const file = settingsFilePath(providerId);
+  await mkdir(path.dirname(file), { recursive: true });
+  const current = await readSettings(providerId);
+  const next = {
+    ...current,
+    ...patch
+  };
+  await writeFile(file, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+}
+
+function pickApiKey(
+  envApiKey: string | undefined,
+  auth?: { type?: string; key?: string }
+): string {
+  if (envApiKey) {
+    return envApiKey;
+  }
+  if (auth?.type === "api" && typeof auth.key === "string") {
+    return auth.key;
+  }
+  return "";
+}
+
+function pickBaseURL(
+  provider: ProviderConfig,
+  defaultBaseURL: string,
+  persistedBaseURL?: string
+): string {
+  const api =
+    typeof provider.api === "string" && provider.api.trim()
+      ? normalizeBaseURLInput(provider.api)
+      : undefined;
+  if (api) {
+    return api;
+  }
+
+  const baseURL =
+    typeof provider.baseURL === "string" && provider.baseURL.trim()
+      ? normalizeBaseURLInput(provider.baseURL)
+      : undefined;
+  if (baseURL) {
+    return baseURL;
+  }
+
+  if (persistedBaseURL && !validateBaseURL(persistedBaseURL)) {
+    return normalizeBaseURLInput(persistedBaseURL);
+  }
+
+  return normalizeBaseURLInput(defaultBaseURL);
+}
+
 async function fetchModels(
   baseURL: string,
   apiKey: string
@@ -192,18 +319,20 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
 
   return async (_input: PluginInput): Promise<Hooks> => ({
     provider: {
-      models: async (provider: ProviderConfig): Promise<Record<string, OpenCodeModel>> => {
+      id: providerId,
+      models: async (
+        provider: ProviderConfig,
+        context?: { auth?: { type?: string; key?: string } }
+      ): Promise<Record<string, OpenCodeModel>> => {
         const staticModels = provider.models ?? {};
-        const apiKey = process.env[apiKeyEnvName] ?? "";
+        const settings = await readSettings(providerId);
+        const apiKey = pickApiKey(process.env[apiKeyEnvName], context?.auth);
 
         if (!apiKey) {
           return staticModels;
         }
 
-        const baseURL =
-          (typeof provider.api === "string" && provider.api.trim()) ||
-          (typeof provider.baseURL === "string" && provider.baseURL.trim()) ||
-          defaultBaseURL;
+        const baseURL = pickBaseURL(provider, defaultBaseURL, settings.baseURL);
 
         const upstreamModels = await fetchModels(baseURL, apiKey);
         if (!upstreamModels) {
@@ -230,9 +359,37 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
     },
     auth: {
       provider: providerId,
-      loader: async () => ({
-        apiKey: process.env[apiKeyEnvName] ?? ""
-      })
+      loader: async (getAuth, provider) => {
+        const auth = await getAuth().catch(() => undefined);
+        const settings = await readSettings(providerId);
+        return {
+          apiKey: pickApiKey(process.env[apiKeyEnvName], auth),
+          baseURL: pickBaseURL(provider, defaultBaseURL, settings.baseURL)
+        };
+      },
+      methods: [
+        {
+          type: "api",
+          label: "Login with OpenAI-compatible API key",
+          prompts: [
+            {
+              type: "text",
+              key: "baseURL",
+              message: "Enter your OpenAI-compatible base URL",
+              placeholder: defaultBaseURL,
+              validate: validateBaseURL
+            }
+          ],
+          authorize: async (inputs = {}) => {
+            const baseURLInput = typeof inputs.baseURL === "string" ? inputs.baseURL : defaultBaseURL;
+            const error = validateBaseURL(baseURLInput);
+            if (!error) {
+              await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput) });
+            }
+            return { type: "success" };
+          }
+        }
+      ]
     }
   });
 }
