@@ -8,6 +8,9 @@ export interface RouterPluginOptions {
   apiKeyEnvName?: string;
   defaultContextWindow?: number;
   defaultMaxOutputTokens?: number;
+  modelsDevCatalogURL?: string;
+  modelsDevTimeoutMs?: number;
+  modelsDevCacheTtlMs?: number;
   includeModelIdRegex?: RegExp;
   excludeModelIdRegex?: RegExp;
 }
@@ -83,6 +86,27 @@ type UpstreamModelList = {
   data: UpstreamModel[];
 };
 
+type ModelsDevModel = {
+  id?: string;
+  name?: string;
+  family?: string;
+  release_date?: string;
+  attachment?: boolean;
+  reasoning?: boolean;
+  temperature?: boolean;
+  tool_call?: boolean;
+  limit?: {
+    context?: number;
+    output?: number;
+  };
+};
+
+type ModelsDevProvider = {
+  models?: Record<string, ModelsDevModel>;
+};
+
+type ModelsDevCatalog = Record<string, ModelsDevProvider>;
+
 const DEFAULT_OPTIONS: Required<
   Omit<RouterPluginOptions, "includeModelIdRegex" | "excludeModelIdRegex">
 > = {
@@ -90,12 +114,23 @@ const DEFAULT_OPTIONS: Required<
   defaultBaseURL: "https://api.openai.com/v1",
   apiKeyEnvName: "MYOPENAI_API_KEY",
   defaultContextWindow: 128000,
-  defaultMaxOutputTokens: 8192
+  defaultMaxOutputTokens: 8192,
+  modelsDevCatalogURL: "https://models.dev/api.json",
+  modelsDevTimeoutMs: 3000,
+  modelsDevCacheTtlMs: 10 * 60 * 1000
 };
 
 type PluginSettings = {
   baseURL?: string;
 };
+
+type ModelsDevCache = {
+  url: string;
+  expiresAt: number;
+  data: ModelsDevCatalog;
+};
+
+let modelsDevCache: ModelsDevCache | undefined;
 
 function normalizeModelsURL(baseURL: string): string {
   let clean = baseURL;
@@ -144,22 +179,42 @@ function inferFamily(modelId: string): string {
 function toOpenCodeModel(
   upstream: UpstreamModel,
   contextWindow: number,
-  maxOutputTokens: number
+  maxOutputTokens: number,
+  enriched?: ModelsDevModel
 ): OpenCodeModel {
-  const family = inferFamily(upstream.id);
+  const family =
+    typeof enriched?.family === "string" && enriched.family.trim()
+      ? enriched.family
+      : inferFamily(upstream.id);
+  const releaseDate =
+    typeof enriched?.release_date === "string" && enriched.release_date.trim()
+      ? enriched.release_date
+      : toDate(upstream.created);
+  const enrichedContext = enriched?.limit?.context;
+  const enrichedOutput = enriched?.limit?.output;
+  const context =
+    typeof enrichedContext === "number" && Number.isFinite(enrichedContext) && enrichedContext > 0
+      ? enrichedContext
+      : contextWindow;
+  const output =
+    typeof enrichedOutput === "number" && Number.isFinite(enrichedOutput) && enrichedOutput > 0
+      ? enrichedOutput
+      : maxOutputTokens;
 
   return {
     id: upstream.id,
-    name: upstream.id,
+    name:
+      typeof enriched?.name === "string" && enriched.name.trim() ? enriched.name : upstream.id,
     family,
-    release_date: toDate(upstream.created),
-    attachment: false,
-    reasoning: family === "o1" || family === "o3",
-    temperature: true,
-    tool_call: true,
+    release_date: releaseDate,
+    attachment: typeof enriched?.attachment === "boolean" ? enriched.attachment : false,
+    reasoning:
+      typeof enriched?.reasoning === "boolean" ? enriched.reasoning : family === "o1" || family === "o3",
+    temperature: typeof enriched?.temperature === "boolean" ? enriched.temperature : true,
+    tool_call: typeof enriched?.tool_call === "boolean" ? enriched.tool_call : true,
     limit: {
-      context: contextWindow,
-      output: maxOutputTokens
+      context,
+      output
     }
   };
 }
@@ -303,6 +358,149 @@ async function fetchModels(
   }
 }
 
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function canonicalVariant(id: string): string {
+  return id.trim().toLowerCase();
+}
+
+function modelIdVariants(id: string): string[] {
+  const normalized = canonicalVariant(id);
+  if (!normalized) {
+    return [];
+  }
+
+  const variants = new Set<string>([normalized]);
+  if (normalized.includes("/")) {
+    const slashParts = normalized.split("/");
+    if (slashParts.length >= 2) {
+      variants.add(slashParts.slice(1).join("/"));
+      variants.add(`${slashParts[0]}:${slashParts.slice(1).join("/")}`);
+    }
+  }
+  if (normalized.includes(":")) {
+    const colonParts = normalized.split(":");
+    if (colonParts.length >= 2) {
+      variants.add(colonParts.slice(1).join(":"));
+      variants.add(`${colonParts[0]}/${colonParts.slice(1).join(":")}`);
+    }
+  }
+  return [...variants];
+}
+
+function isModelsDevCatalog(payload: unknown): payload is ModelsDevCatalog {
+  if (!isObjectRecord(payload)) {
+    return false;
+  }
+  return Object.values(payload).every((provider) => {
+    if (!isObjectRecord(provider)) {
+      return false;
+    }
+    if (provider.models === undefined) {
+      return true;
+    }
+    if (!isObjectRecord(provider.models)) {
+      return false;
+    }
+    return Object.values(provider.models).every((model) => isObjectRecord(model));
+  });
+}
+
+async function fetchModelsDevCatalog(
+  catalogURL: string,
+  timeoutMs: number,
+  cacheTtlMs: number
+): Promise<ModelsDevCatalog | null> {
+  const now = Date.now();
+  if (
+    modelsDevCache &&
+    modelsDevCache.url === catalogURL &&
+    modelsDevCache.expiresAt > now
+  ) {
+    return modelsDevCache.data;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(catalogURL, {
+      method: "GET",
+      signal: controller.signal
+    });
+    if (!response.ok) {
+      console.warn(
+        `[opencode-9router-plugin] models.dev enrichment unavailable (${response.status} ${response.statusText})`
+      );
+      return null;
+    }
+    const payload = (await response.json()) as unknown;
+    if (!isModelsDevCatalog(payload)) {
+      console.warn("[opencode-9router-plugin] models.dev enrichment unavailable (invalid schema)");
+      return null;
+    }
+
+    modelsDevCache = {
+      url: catalogURL,
+      expiresAt: now + cacheTtlMs,
+      data: payload
+    };
+    return payload;
+  } catch {
+    console.warn("[opencode-9router-plugin] models.dev enrichment unavailable (request error)");
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function buildModelsDevLookup(catalog: ModelsDevCatalog): Map<string, ModelsDevModel> {
+  const lookup = new Map<string, ModelsDevModel>();
+  for (const [providerId, provider] of Object.entries(catalog)) {
+    if (!provider.models) {
+      continue;
+    }
+    for (const [modelId, model] of Object.entries(provider.models)) {
+      for (const variant of modelIdVariants(`${providerId}/${modelId}`)) {
+        if (!lookup.has(variant)) {
+          lookup.set(variant, model);
+        }
+      }
+      for (const variant of modelIdVariants(modelId)) {
+        if (!lookup.has(variant)) {
+          lookup.set(variant, model);
+        }
+      }
+      if (typeof model.id === "string") {
+        for (const variant of modelIdVariants(model.id)) {
+          if (!lookup.has(variant)) {
+            lookup.set(variant, model);
+          }
+        }
+      }
+    }
+  }
+  return lookup;
+}
+
+function findEnrichedModel(
+  modelId: string,
+  lookup?: Map<string, ModelsDevModel>
+): ModelsDevModel | undefined {
+  if (!lookup) {
+    return undefined;
+  }
+  for (const variant of modelIdVariants(modelId)) {
+    const match = lookup.get(variant);
+    if (match) {
+      return match;
+    }
+  }
+  return undefined;
+}
+
 export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions = {}) {
   const {
     providerId,
@@ -310,6 +508,9 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
     apiKeyEnvName,
     defaultContextWindow,
     defaultMaxOutputTokens,
+    modelsDevCatalogURL,
+    modelsDevTimeoutMs,
+    modelsDevCacheTtlMs,
     includeModelIdRegex,
     excludeModelIdRegex
   } = {
@@ -325,6 +526,12 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
         context?: { auth?: { type?: string; key?: string } }
       ): Promise<Record<string, OpenCodeModel>> => {
         const staticModels = provider.models ?? {};
+        const modelsDevCatalog = await fetchModelsDevCatalog(
+          modelsDevCatalogURL,
+          modelsDevTimeoutMs,
+          modelsDevCacheTtlMs
+        );
+        const modelsDevLookup = modelsDevCatalog ? buildModelsDevLookup(modelsDevCatalog) : undefined;
         const settings = await readSettings(providerId);
         const apiKey = pickApiKey(process.env[apiKeyEnvName], context?.auth);
 
@@ -343,10 +550,12 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           .filter((model) => regexPass(includeModelIdRegex, model.id))
           .filter((model) => !excludeModelIdRegex || !regexPass(excludeModelIdRegex, model.id))
           .reduce<Record<string, OpenCodeModel>>((acc, model) => {
+            const enriched = findEnrichedModel(model.id, modelsDevLookup);
             acc[model.id] = toOpenCodeModel(
               model,
               defaultContextWindow,
-              defaultMaxOutputTokens
+              defaultMaxOutputTokens,
+              enriched
             );
             return acc;
           }, {});

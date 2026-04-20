@@ -2,7 +2,7 @@
 
 A production-ready OpenCode plugin that auto-connects to any OpenAI-compatible API and auto-discovers available models from `GET /v1/models`.
 
-The plugin maps discovered models into OpenCode `provider.models` format, supports include/exclude filtering by model ID, and safely falls back to static models when discovery cannot run.
+The plugin maps discovered models into OpenCode `provider.models` format, enriches capability/token metadata from `https://models.dev/api.json`, supports include/exclude filtering by model ID, and safely falls back to static models when discovery cannot run.
 
 ## Installation
 
@@ -69,6 +69,9 @@ const customPlugin = createOpenAICompatibleModelsPlugin({
   apiKeyEnvName: "MYOPENAI_API_KEY",
   defaultContextWindow: 128000,
   defaultMaxOutputTokens: 8192,
+  modelsDevCatalogURL: "https://models.dev/api.json",
+  modelsDevTimeoutMs: 3000,
+  modelsDevCacheTtlMs: 600000,
   includeModelIdRegex: /^gpt|^o\d/i,
   excludeModelIdRegex: /audio|embedding/i
 });
@@ -92,17 +95,23 @@ At runtime, base URL resolution order is:
 3. persisted base URL from login prompt
 4. `defaultBaseURL` plugin option
 
-## Capability defaults
+## models.dev enrichment
 
-OpenAI-compatible `/models` responses do not expose full capability metadata.
+`GET /v1/models` usually does not include capability and limit details. This plugin enriches discovered models using `https://models.dev/api.json`.
 
-This plugin applies safe defaults when converting models:
+Matching supports common variants for OpenCode compatibility:
+
+- `provider/model` (ex: `openai/gpt-4o-mini`)
+- `provider:model` (ex: `openai:gpt-4o-mini`)
+- bare model id (ex: `gpt-4o-mini`)
+
+If no models.dev match is found, safe defaults are used:
 
 - `attachment: false`
 - `temperature: true`
 - `tool_call: true`
-- `reasoning: true` only for `o1` and `o3` families
-- `limit.context` and `limit.output` come from plugin options defaults
+- `reasoning: true` only for inferred `o1` and `o3` families
+- `limit.context` and `limit.output` from plugin defaults
 
 ## Troubleshooting
 
