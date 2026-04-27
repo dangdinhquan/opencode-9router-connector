@@ -6,8 +6,76 @@ The plugin maps discovered models into OpenCode `provider.models` format, auto-n
 
 ## Installation
 
+Add the plugin to your OpenCode config file (`~/.config/opencode/opencode.json`):
+
+```json
+{
+  "plugins": ["@dendaio/opencode-9router-plugin"]
+}
+```
+
+OpenCode will automatically resolve and load the plugin on next startup.
+
+## Local Development
+
+Use this workflow when developing or testing the plugin directly from source (e.g. inside a Codespace or local clone of this repo).
+
+### 1. Install dependencies and build
+
 ```bash
-npm install opencode-9router-plugin
+npm install
+npm run build
+```
+
+### 2. Link the package globally
+
+```bash
+npm link
+```
+
+This creates a global symlink pointing to your local `dist/` so OpenCode can resolve `@dendaio/opencode-9router-plugin` without publishing to npm.
+
+### 3. Configure OpenCode to use the plugin
+
+Add to `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "plugins": ["@dendaio/opencode-9router-plugin"]
+}
+```
+
+### 4. Watch mode for active development
+
+In one terminal, start the incremental rebuild watcher:
+
+```bash
+npm run dev
+```
+
+In another terminal, run OpenCode:
+
+```bash
+opencode
+```
+
+Changes to source files are rebuilt automatically; restart OpenCode to pick them up.
+
+### 5. Verify the plugin loaded
+
+Inside OpenCode, run:
+
+```
+/connect 9router
+/models
+```
+
+You should see the `9router` provider and its discovered models.
+
+### Debug logging
+
+```bash
+OPENCODE_LOG=debug opencode
 ```
 
 ## Publish to npm (GitHub Actions)
@@ -35,17 +103,17 @@ cp .env.example .env
 
 Required by default:
 
-- `MYOPENAI_API_KEY`: API key used for model discovery and auth hook loading.
+- `ROUTER9_API_KEY`: API key used for model discovery and auth hook loading.
 
 You can change the env var name with `apiKeyEnvName` in plugin options.
 
 ## OpenCode provider config example
 
-> The provider key must match the plugin `providerId` (default: `myopenai`).
+> The provider key must match the plugin `providerId` (default: `9router`).
 
 ```ts
 providers: {
-  myopenai: {
+  "9router": {
     // Either field can be used; plugin resolves api first, then baseURL.
     api: "https://api.openai.com/v1",
     // baseURL: "https://api.openai.com/v1",
@@ -79,9 +147,9 @@ export default {
 
 // Or customize
 const customPlugin = createOpenAICompatibleModelsPlugin({
-  providerId: "myopenai",
+  providerId: "9router",
   defaultBaseURL: "https://api.openai.com/v1",
-  apiKeyEnvName: "MYOPENAI_API_KEY",
+  apiKeyEnvName: "ROUTER9_API_KEY",
   defaultContextWindow: 128000,
   defaultMaxOutputTokens: 8192,
   modelsDevCatalogURL: "https://models.dev/api.json",
@@ -94,7 +162,7 @@ const customPlugin = createOpenAICompatibleModelsPlugin({
 
 ## Interactive login prompts (`/connect` / `opencode auth login`)
 
-When you log in with the plugin provider (`myopenai` by default), OpenCode will prompt for:
+When you log in with the plugin provider (`9router` by default), OpenCode will prompt for:
 
 - API key (built-in API auth prompt)
 - Base URL (plugin auth prompt)
@@ -130,7 +198,7 @@ If no models.dev match is found, safe defaults are used:
 
 ## Troubleshooting
 
-- **401 Unauthorized**: verify `MYOPENAI_API_KEY` (or your configured `apiKeyEnvName`) is set and valid.
+- **401 Unauthorized**: verify `ROUTER9_API_KEY` (or your configured `apiKeyEnvName`) is set and valid.
 - **404 Not Found**: check your base URL. The plugin calls:
   - `{baseURL}/models` when base URL already ends with `/v1`
   - `{baseURL}/v1/models` otherwise
