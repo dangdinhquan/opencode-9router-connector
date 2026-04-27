@@ -5,24 +5,98 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (e.g. v0.3.1). Required for manual run.'
+        required: true
+        type: string
 
 permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      EXPECTED_PACKAGE_NAME: "@dendaio/opencode-9router-plugin"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Resolve tag source
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            RAW_TAG="${{ inputs.tag }}"
+          else
+            RAW_TAG="${GITHUB_REF_NAME}"
+          fi
+
+          echo "raw_tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
+          VERSION="${RAW_TAG#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          echo "Resolved tag: $RAW_TAG"
+          echo "Resolved version: $VERSION"
+
+      - name: Validate tag format (strict semver)
+        shell: bash
+        run: |
+          set -euo pipefail
+          RAW_TAG="${{ steps.meta.outputs.raw_tag }}"
+          VERSION="${{ steps.meta.outputs.version }}"
+
+          # Require tag like v1.2.3 or v1.2.3-rc.1
+          if [[ ! "$RAW_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "❌ Invalid tag format: $RAW_TAG"
+            echo "Expected: vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-prerelease"
+            exit 1
+          fi
+
+          # Ensure removing 'v' changed value
+          if [[ "$VERSION" == "$RAW_TAG" ]]; then
+            echo "❌ Tag must start with 'v'"
+            exit 1
+          fi
+
+      - name: Validate package identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          NAME=$(node -p "require('./package.json').name")
+          if [[ "$NAME" != "$EXPECTED_PACKAGE_NAME" ]]; then
+            echo "❌ package.json name mismatch"
+            echo "Found:    $NAME"
+            echo "Expected: $EXPECTED_PACKAGE_NAME"
+            exit 1
+          fi
+          echo "✅ Package name: $NAME"
+
+      - name: Set package version from tag (no commit/tag)
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.meta.outputs.version }}"
+          npm version "$VERSION" --no-git-tag-version
+          echo "✅ package.json version set to $(node -p "require('./package.json').version")"
 
       - name: Install dependencies
         run: npm ci
@@ -33,7 +107,34 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Verify tarball contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm pack --dry-run
+
+      - name: Fail if version already exists on npm
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+
+          if npm view "${PKG}@${VER}" version >/dev/null 2>&1; then
+            echo "❌ ${PKG}@${VER} already exists on npm. Refusing to publish."
+            exit 1
+          fi
+          echo "✅ Version ${PKG}@${VER} is not published yet."
+
       - name: Publish package
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Summary
+        if: success()
+        shell: bash
+        run: |
+          PKG=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          echo "✅ Published ${PKG}@${VER}"
