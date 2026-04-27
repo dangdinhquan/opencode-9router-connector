@@ -358,7 +358,8 @@ function toOpenCodeModel(
   baseURL: string,
   contextWindow: number,
   maxOutputTokens: number,
-  enriched?: ModelsDevModel
+  enriched?: ModelsDevModel,
+  apiKey?: string
 ): OpenCodeModel {
   const [providerAlias, modelPart] = splitProviderAlias(upstream.id);
   const providerGroup = providerAlias
@@ -439,7 +440,7 @@ function toOpenCodeModel(
     },
     status: "active",
     options: {},
-    headers: {}
+    headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {}
   };
 }
 
@@ -824,7 +825,8 @@ function buildConfigModelEntry(
   baseURL: string,
   contextWindow: number,
   maxOutputTokens: number,
-  enriched?: ModelsDevModel
+  enriched?: ModelsDevModel,
+  apiKey?: string
 ): Record<string, unknown> {
   const attachment = typeof enriched?.attachment === "boolean" ? enriched.attachment : false;
   const inferredFamily = inferFamily(modelPart);
@@ -864,6 +866,7 @@ function buildConfigModelEntry(
     provider: { npm: "@ai-sdk/openai-compatible", api: baseURL },
     status: "active",
     release_date: releaseDate,
+    ...(apiKey ? { headers: { Authorization: `Bearer ${apiKey}` } } : {}),
   };
 }
 
@@ -1000,7 +1003,8 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
                 baseURL,
                 defaultContextWindow,
                 defaultMaxOutputTokens,
-                enriched
+                enriched,
+                apiKey
               );
             }
 
@@ -1081,7 +1085,8 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
                   baseURL,
                   defaultContextWindow,
                   defaultMaxOutputTokens,
-                  enriched
+                  enriched,
+                  apiKey
                 );
               }
             }
@@ -1132,7 +1137,8 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
                 baseURL,
                 defaultContextWindow,
                 defaultMaxOutputTokens,
-                enriched
+                enriched,
+                apiKey
               );
               return acc;
             }, {});
