@@ -763,8 +763,10 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             if (!error) {
               await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput) });
             }
-            // Return without key so opencode stores the API key it captured itself.
-            return { type: "success" } as { type: "success"; key: string };
+            // Pass opencode's captured API key back so it is stored in auth.json
+            // and available to the models hook via context.auth.key.
+            const apiKey = typeof inputs.key === "string" ? inputs.key : "";
+            return { type: "success", key: apiKey };
           }
         }
       ]
