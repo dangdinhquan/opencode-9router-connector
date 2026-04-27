@@ -411,11 +411,12 @@ function openCodeConfigPath(): string {
 }
 
 /**
- * Ensure the provider is listed under `providers` in opencode.json so that
- * opencode will invoke the plugin's `provider.models` hook on startup.
+ * Ensure the provider is listed under the `provider` key in opencode.json so
+ * that opencode will invoke the plugin's `provider.models` hook on startup.
  *
  * Opencode only calls `provider.models` for providers that exist in its active
- * registry, which is built from the `providers` section of opencode.json.
+ * registry, which is built from the `provider` section of opencode.json
+ * (note: the key is singular "provider", not "providers").
  * Without this entry the models hook is silently skipped regardless of whether
  * the user has valid credentials.
  */
@@ -432,19 +433,19 @@ async function ensureProviderInOpenCodeConfig(providerId: string): Promise<void>
     // file does not exist yet — start from scratch
   }
 
-  const providers = config.providers;
-  const providersObj: Record<string, unknown> =
-    providers && typeof providers === "object" && !Array.isArray(providers)
-      ? (providers as Record<string, unknown>)
+  const providerSection = config.provider;
+  const providerObj: Record<string, unknown> =
+    providerSection && typeof providerSection === "object" && !Array.isArray(providerSection)
+      ? (providerSection as Record<string, unknown>)
       : {};
 
-  if (typeof providersObj[providerId] !== "undefined") {
+  if (typeof providerObj[providerId] !== "undefined") {
     // already registered — nothing to do
     return;
   }
 
-  providersObj[providerId] = {};
-  config.providers = providersObj;
+  providerObj[providerId] = {};
+  config.provider = providerObj;
 
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, `${JSON.stringify(config, null, 2)}\n`, "utf8");
