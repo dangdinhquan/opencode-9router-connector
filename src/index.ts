@@ -92,7 +92,7 @@ export interface AuthHook {
     }>;
     authorize?: (inputs?: Record<string, string>) => Promise<{
       type: "success";
-      key: string;
+      key?: string;
       provider?: string;
     } | {
       type: "failed";
@@ -498,10 +498,11 @@ async function fetchModels(
 ): Promise<UpstreamModel[] | null> {
   const url = normalizeModelsURL(baseURL);
 
-  const headers: Record<string, string> = {};
-  if (apiKey) {
-    headers["Authorization"] = `Bearer ${apiKey}`;
-  }
+  const headers: Record<string, string> = {
+    // Always send an Authorization header. The gateway is public and accepts
+    // any non-empty key, but omitting the header entirely may cause a 401.
+    Authorization: `Bearer ${apiKey || "anonymous"}`
+  };
 
   try {
     const response = await fetch(url, {
@@ -776,10 +777,12 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             if (!error) {
               await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput) });
             }
-            // Pass opencode's captured API key back so it is stored in auth.json
-            // and available to the models hook via context.auth.key.
-            const apiKey = typeof inputs.key === "string" ? inputs.key : "";
-            return { type: "success", key: apiKey };
+            // Only return the key if opencode explicitly passed it in inputs.
+            // If inputs.key is absent/empty, do NOT return an empty key — that
+            // would overwrite the API key that opencode already stored in auth.json
+            // before invoking this authorize callback.
+            const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
+            return apiKey !== undefined ? { type: "success", key: apiKey } : { type: "success" };
           }
         }
       ]
