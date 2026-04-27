@@ -1,6 +1,6 @@
 {
   "name": "@dendaio/opencode-9router-plugin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "OpenCode plugin for OpenAI-compatible auto model discovery",
   "repository": {
     "url": "https://github.com/dangdinhquan/opencode-9router-connector"

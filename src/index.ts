@@ -15,48 +15,87 @@ export interface RouterPluginOptions {
   excludeModelIdRegex?: RegExp;
 }
 
+/** Model format expected by opencode (ModelV2). */
 export interface OpenCodeModel {
   id: string;
   name: string;
   family: string;
   release_date: string;
-  attachment: boolean;
-  reasoning: boolean;
-  temperature: boolean;
-  tool_call: boolean;
+  api: {
+    id: string;
+    url: string;
+    npm: string;
+  };
+  capabilities: {
+    temperature: boolean;
+    reasoning: boolean;
+    attachment: boolean;
+    toolcall: boolean;
+    input: {
+      text: boolean;
+      audio: boolean;
+      image: boolean;
+      video: boolean;
+      pdf: boolean;
+    };
+    output: {
+      text: boolean;
+      audio: boolean;
+      image: boolean;
+      video: boolean;
+      pdf: boolean;
+    };
+    interleaved: boolean;
+  };
+  cost: {
+    input: number;
+    output: number;
+    cache: {
+      read: number;
+      write: number;
+    };
+  };
   limit: {
     context: number;
+    input?: number;
     output: number;
   };
+  status: "alpha" | "beta" | "deprecated" | "active";
+  options: Record<string, unknown>;
+  headers: Record<string, string>;
 }
 
 export interface ProviderConfig {
   api?: string;
   baseURL?: string;
+  key?: string;
+  options?: Record<string, unknown>;
   models?: Record<string, OpenCodeModel>;
   [key: string]: unknown;
 }
 
 export interface AuthHook {
   provider: string;
-  loader: (
+  loader?: (
     getAuth: () => Promise<{ type?: string; key?: string }>,
-    provider: ProviderConfig
-  ) => Promise<{ apiKey: string; baseURL: string }>;
+    provider: ProviderConfig | undefined
+  ) => Promise<Record<string, unknown>>;
   methods: Array<{
     type: "api";
     label: string;
-    prompts: Array<{
+    prompts?: Array<{
       type: "text";
-      key: "baseURL";
+      key: string;
       message: string;
-      placeholder: string;
-      validate: (value: string) => string | undefined;
+      placeholder?: string;
+      validate?: (value: string) => string | undefined;
     }>;
-    authorize: (inputs?: Record<string, string>) => Promise<{
+    authorize?: (inputs?: Record<string, string>) => Promise<{
       type: "success";
-      key?: string;
+      key: string;
       provider?: string;
+    } | {
+      type: "failed";
     }>;
   }>;
 }
@@ -74,6 +113,11 @@ export interface Hooks {
 
 export interface PluginInput {
   [key: string]: unknown;
+}
+
+export interface PluginModule {
+  id?: string;
+  server: (input: PluginInput, options?: Record<string, unknown>) => Promise<Hooks>;
 }
 
 type UpstreamModel = {
@@ -238,6 +282,7 @@ function splitProviderAndModelId(modelId: string): { providerAlias?: string; mod
 function toOpenCodeModel(
   upstream: UpstreamModel,
   providerId: string,
+  baseURL: string,
   contextWindow: number,
   maxOutputTokens: number,
   enriched?: ModelsDevModel
@@ -267,20 +312,58 @@ function toOpenCodeModel(
       ? enriched.name.trim()
       : parsedId.modelLabel || upstream.id;
 
+  const attachment = typeof enriched?.attachment === "boolean" ? enriched.attachment : false;
+  const reasoning =
+    typeof enriched?.reasoning === "boolean" ? enriched.reasoning : family === "o1" || family === "o3";
+  const temperature = typeof enriched?.temperature === "boolean" ? enriched.temperature : true;
+  const toolcall = typeof enriched?.tool_call === "boolean" ? enriched.tool_call : true;
+
   return {
     id: upstream.id,
     name: `${providerLabel} - ${modelLabel}`,
     family,
     release_date: releaseDate,
-    attachment: typeof enriched?.attachment === "boolean" ? enriched.attachment : false,
-    reasoning:
-      typeof enriched?.reasoning === "boolean" ? enriched.reasoning : family === "o1" || family === "o3",
-    temperature: typeof enriched?.temperature === "boolean" ? enriched.temperature : true,
-    tool_call: typeof enriched?.tool_call === "boolean" ? enriched.tool_call : true,
+    api: {
+      id: upstream.id,
+      url: baseURL,
+      npm: "@ai-sdk/openai-compatible"
+    },
+    capabilities: {
+      temperature,
+      reasoning,
+      attachment,
+      toolcall,
+      input: {
+        text: true,
+        audio: false,
+        image: attachment,
+        video: false,
+        pdf: attachment
+      },
+      output: {
+        text: true,
+        audio: false,
+        image: false,
+        video: false,
+        pdf: false
+      },
+      interleaved: reasoning
+    },
+    cost: {
+      input: 0,
+      output: 0,
+      cache: {
+        read: 0,
+        write: 0
+      }
+    },
     limit: {
       context,
       output
-    }
+    },
+    status: "active",
+    options: {},
+    headers: {}
   };
 }
 
@@ -350,7 +433,8 @@ async function writeSettings(providerId: string, patch: PluginSettings): Promise
 
 function pickApiKey(
   envApiKey: string | undefined,
-  auth?: { type?: string; key?: string }
+  auth?: { type?: string; key?: string },
+  providerKey?: string
 ): string {
   if (envApiKey) {
     return envApiKey;
@@ -358,28 +442,45 @@ function pickApiKey(
   if (auth?.type === "api" && typeof auth.key === "string") {
     return auth.key;
   }
+  if (typeof providerKey === "string" && providerKey) {
+    return providerKey;
+  }
   return "";
 }
 
 function pickBaseURL(
-  provider: ProviderConfig,
+  provider: ProviderConfig | undefined,
   defaultBaseURL: string,
   persistedBaseURL?: string
 ): string {
-  const api =
-    typeof provider.api === "string" && provider.api.trim()
-      ? normalizeBaseURLInput(provider.api)
-      : undefined;
-  if (api) {
-    return api;
-  }
+  if (provider) {
+    // New ProviderV2 format: baseURL/api stored under provider.options
+    if (isObjectRecord(provider.options)) {
+      const optApi =
+        typeof provider.options.api === "string" && provider.options.api.trim()
+          ? normalizeBaseURLInput(provider.options.api)
+          : undefined;
+      if (optApi) return optApi;
 
-  const baseURL =
-    typeof provider.baseURL === "string" && provider.baseURL.trim()
-      ? normalizeBaseURLInput(provider.baseURL)
-      : undefined;
-  if (baseURL) {
-    return baseURL;
+      const optBaseURL =
+        typeof provider.options.baseURL === "string" && provider.options.baseURL.trim()
+          ? normalizeBaseURLInput(provider.options.baseURL)
+          : undefined;
+      if (optBaseURL) return optBaseURL;
+    }
+
+    // Legacy direct fields
+    const api =
+      typeof provider.api === "string" && provider.api.trim()
+        ? normalizeBaseURLInput(provider.api)
+        : undefined;
+    if (api) return api;
+
+    const baseURL =
+      typeof provider.baseURL === "string" && provider.baseURL.trim()
+        ? normalizeBaseURLInput(provider.baseURL)
+        : undefined;
+    if (baseURL) return baseURL;
   }
 
   if (persistedBaseURL && !validateBaseURL(persistedBaseURL)) {
@@ -598,7 +699,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
         );
         const modelsDevLookup = modelsDevCatalog ? buildModelsDevLookup(modelsDevCatalog) : undefined;
         const settings = await readSettings(providerId);
-        const apiKey = pickApiKey(process.env[apiKeyEnvName], context?.auth);
+        const apiKey = pickApiKey(process.env[apiKeyEnvName], context?.auth, provider.key);
 
         if (!apiKey) {
           return staticModels;
@@ -619,6 +720,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             acc[model.id] = toOpenCodeModel(
               model,
               providerId,
+              baseURL,
               defaultContextWindow,
               defaultMaxOutputTokens,
               enriched
@@ -638,8 +740,8 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
         const auth = await getAuth().catch(() => undefined);
         const settings = await readSettings(providerId);
         return {
-          apiKey: pickApiKey(process.env[apiKeyEnvName], auth),
-          baseURL: pickBaseURL(provider, defaultBaseURL, settings.baseURL)
+          apiKey: pickApiKey(process.env[apiKeyEnvName], auth, (provider as ProviderConfig | undefined)?.key),
+          baseURL: pickBaseURL(provider as ProviderConfig | undefined, defaultBaseURL, settings.baseURL)
         };
       },
       methods: [
@@ -649,6 +751,13 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           prompts: [
             {
               type: "text",
+              key: "key",
+              message: "Enter your API key",
+              placeholder: "sk-...",
+              validate: (value: string) => (!value.trim() ? "API key is required" : undefined)
+            },
+            {
+              type: "text",
               key: "baseURL",
               message: "Enter your OpenAI-compatible base URL",
               placeholder: defaultBaseURL,
@@ -656,12 +765,16 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             }
           ],
           authorize: async (inputs = {}) => {
+            const apiKey = typeof inputs.key === "string" ? inputs.key.trim() : "";
+            if (!apiKey) {
+              return { type: "failed" };
+            }
             const baseURLInput = typeof inputs.baseURL === "string" ? inputs.baseURL : defaultBaseURL;
             const error = validateBaseURL(baseURLInput);
             if (!error) {
               await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput) });
             }
-            return { type: "success" };
+            return { type: "success", key: apiKey };
           }
         }
       ]
@@ -671,4 +784,4 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
 
 const plugin = createOpenAICompatibleModelsPlugin();
 
-export default plugin;
+export default { server: plugin } satisfies PluginModule;
