@@ -751,13 +751,6 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           prompts: [
             {
               type: "text",
-              key: "key",
-              message: "Enter your API key",
-              placeholder: "sk-...",
-              validate: (value: string) => (!value.trim() ? "API key is required" : undefined)
-            },
-            {
-              type: "text",
               key: "baseURL",
               message: "Enter your OpenAI-compatible base URL",
               placeholder: defaultBaseURL,
@@ -765,16 +758,13 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             }
           ],
           authorize: async (inputs = {}) => {
-            const apiKey = typeof inputs.key === "string" ? inputs.key.trim() : "";
-            if (!apiKey) {
-              return { type: "failed" };
-            }
             const baseURLInput = typeof inputs.baseURL === "string" ? inputs.baseURL : defaultBaseURL;
             const error = validateBaseURL(baseURLInput);
             if (!error) {
               await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput) });
             }
-            return { type: "success", key: apiKey };
+            // Return without key so opencode stores the API key it captured itself.
+            return { type: "success" } as { type: "success"; key: string };
           }
         }
       ]
