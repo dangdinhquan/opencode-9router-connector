@@ -155,7 +155,7 @@ const DEFAULT_OPTIONS: Required<
   Omit<RouterPluginOptions, "includeModelIdRegex" | "excludeModelIdRegex">
 > = {
   providerId: "9router",
-  defaultBaseURL: "https://llm-gateway.denda.cloud/v1",
+  defaultBaseURL: "https://api.your_9router.com/v1",
   apiKeyEnvName: "ROUTER9_API_KEY",
   defaultContextWindow: 128000,
   defaultMaxOutputTokens: 8192,
@@ -326,46 +326,11 @@ function inferFamily(modelId: string): string {
   return fallback || "unknown";
 }
 
-function toDisplayProviderName(providerAlias: string): string {
-  const normalized = canonicalVariant(providerAlias);
-  if (!normalized) {
-    return "Unknown";
-  }
 
-  const mapped = PROVIDER_ALIAS_TO_NAME[normalized];
-  if (mapped) {
-    return mapped;
-  }
-
-  return normalized
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function splitProviderAndModelId(modelId: string): { providerAlias?: string; modelLabel: string } {
-  const trimmed = modelId.trim();
-  if (!trimmed) {
-    return { modelLabel: modelId };
-  }
-
-  for (const separator of ["/", ":"]) {
-    const idx = trimmed.indexOf(separator);
-    if (idx > 0 && idx < trimmed.length - 1) {
-      return {
-        providerAlias: trimmed.slice(0, idx),
-        modelLabel: trimmed.slice(idx + 1)
-      };
-    }
-  }
-
-  return { modelLabel: trimmed };
-}
 
 function toOpenCodeModel(
   upstream: UpstreamModel,
-  providerId: string,
+  _providerId: string,
   baseURL: string,
   contextWindow: number,
   maxOutputTokens: number,
@@ -389,12 +354,6 @@ function toOpenCodeModel(
     typeof enrichedOutput === "number" && Number.isFinite(enrichedOutput) && enrichedOutput > 0
       ? enrichedOutput
       : maxOutputTokens;
-  const parsedId = splitProviderAndModelId(upstream.id);
-  const providerLabel = toDisplayProviderName(parsedId.providerAlias ?? providerId);
-  const modelLabel =
-    typeof enriched?.name === "string" && enriched.name.trim()
-      ? enriched.name.trim()
-      : parsedId.modelLabel || upstream.id;
 
   const attachment = typeof enriched?.attachment === "boolean" ? enriched.attachment : false;
   const reasoning =
@@ -404,7 +363,7 @@ function toOpenCodeModel(
 
   return {
     id: upstream.id,
-    name: `[${providerLabel}] ${modelLabel}`,
+    name: upstream.id,
     family,
     release_date: releaseDate,
     api: {
@@ -870,13 +829,6 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
         // An empty apiKey simply omits the Authorization header.
         const baseURL = pickBaseURL(provider, defaultBaseURL, settings.baseURL);
 
-        process.stderr.write(
-          `[opencode-9router-plugin] models hook: baseURL=${baseURL}  apiKey=${apiKey ? apiKey.slice(0, 8) + "…" : "(empty)"}\n`
-        );
-        process.stderr.write(
-          `[opencode-9router-plugin] models hook: auth from context=${JSON.stringify(context?.auth ?? null)}\n`
-        );
-
         const upstreamModels = await fetchModels(baseURL, apiKey);
         if (!upstreamModels) {
           process.stderr.write(
@@ -928,12 +880,12 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
       methods: [
         {
           type: "api",
-          label: "Login with OpenAI-compatible API key",
+          label: "Login with 9Router API key",
           prompts: [
             {
               type: "text",
               key: "baseURL",
-              message: "Enter your OpenAI-compatible base URL",
+              message: "Enter your 9Router base URL",
               placeholder: defaultBaseURL,
               validate: validateBaseURL
             }
