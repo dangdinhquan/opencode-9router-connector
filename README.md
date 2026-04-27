@@ -25,6 +25,7 @@ Use this workflow when developing or testing the plugin directly from source (e.
 ### 1. Install dependencies and build
 
 ```bash
+npm install -g opencode-ai
 npm install
 npm run build
 ```
@@ -35,11 +36,9 @@ Add the **absolute path** to the built entrypoint in `~/.config/opencode/opencod
 
 ```json
 {
-  "plugin": ["/absolute/path/to/opencode-9router-connector/dist/index.js"]
+  "plugin": ["/workspaces/opencode-9router-connector/dist/index.js"]
 }
 ```
-
-Replace `/absolute/path/to/opencode-9router-connector` with the actual path to your clone.
 
 ### 3. Watch mode for active development
 
