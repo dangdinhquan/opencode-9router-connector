@@ -188,9 +188,12 @@ const PROVIDER_ALIAS_TO_NAME: Record<string, string> = {
   google: "Google",
   qw: "Qwen",
   qwen: "Qwen",
+  gh: "GitHub Copilot",
   gl: "GitHub Copilot",
   github: "GitHub Copilot",
   "github-copilot": "GitHub Copilot",
+  ag: "Antigravity",
+  antigravity: "Antigravity",
   op: "OpenCode",
   opencode: "OpenCode",
   if: "IFlow",
@@ -320,7 +323,7 @@ function toOpenCodeModel(
 
   return {
     id: upstream.id,
-    name: `${providerLabel} - ${modelLabel}`,
+    name: `[${providerLabel}] ${modelLabel}`,
     family,
     release_date: releaseDate,
     api: {
