@@ -155,7 +155,7 @@ const DEFAULT_OPTIONS: Required<
   Omit<RouterPluginOptions, "includeModelIdRegex" | "excludeModelIdRegex">
 > = {
   providerId: "9router",
-  defaultBaseURL: "https://api.openai.com/v1",
+  defaultBaseURL: "https://llm-gateway.denda.cloud/v1",
   apiKeyEnvName: "ROUTER9_API_KEY",
   defaultContextWindow: 128000,
   defaultMaxOutputTokens: 8192,
@@ -498,12 +498,15 @@ async function fetchModels(
 ): Promise<UpstreamModel[] | null> {
   const url = normalizeModelsURL(baseURL);
 
+  const headers: Record<string, string> = {};
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+  }
+
   try {
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiKey}`
-      }
+      headers
     });
 
     if (!response.ok) {
@@ -713,10 +716,8 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
         const apiKey =
           pickApiKey(process.env[apiKeyEnvName], context?.auth, provider.key) || optionsApiKey || "";
 
-        if (!apiKey) {
-          return staticModels;
-        }
-
+        // Always attempt model discovery — the endpoint may be public.
+        // An empty apiKey simply omits the Authorization header.
         const baseURL = pickBaseURL(provider, defaultBaseURL, settings.baseURL);
 
         const upstreamModels = await fetchModels(baseURL, apiKey);

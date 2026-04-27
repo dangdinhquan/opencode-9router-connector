@@ -110,8 +110,9 @@ You can change the env var name with `apiKeyEnvName` in plugin options.
 providers: {
   "9router": {
     // Either field can be used; plugin resolves api first, then baseURL.
-    api: "https://api.openai.com/v1",
-    // baseURL: "https://api.openai.com/v1",
+    // Defaults to https://llm-gateway.denda.cloud/v1 if not specified.
+    api: "https://llm-gateway.denda.cloud/v1",
+    // baseURL: "https://llm-gateway.denda.cloud/v1",
     models: {
       // Static fallback models. Dynamic discovery overrides by model id.
       "gpt-4o-mini": {
@@ -143,7 +144,7 @@ export default {
 // Or customize
 const customPlugin = createOpenAICompatibleModelsPlugin({
   providerId: "9router",
-  defaultBaseURL: "https://api.openai.com/v1",
+  defaultBaseURL: "https://llm-gateway.denda.cloud/v1",
   apiKeyEnvName: "ROUTER9_API_KEY",
   defaultContextWindow: 128000,
   defaultMaxOutputTokens: 8192,
