@@ -101,6 +101,8 @@ export interface AuthHook {
 }
 
 export interface Hooks {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  config?: (cfg: any) => Promise<void>;
   provider: {
     id: string;
     models: (
@@ -166,6 +168,7 @@ const DEFAULT_OPTIONS: Required<
 
 type PluginSettings = {
   baseURL?: string;
+  apiKey?: string;
 };
 
 type ModelsDevCache = {
@@ -811,6 +814,59 @@ function findEnrichedModel(
   return undefined;
 }
 
+/**
+ * Build a model entry suitable for injection into an opencode config provider.
+ * The returned object matches the shape that opencode's config parser reads.
+ */
+function buildConfigModelEntry(
+  upstream: UpstreamModel,
+  modelPart: string,
+  baseURL: string,
+  contextWindow: number,
+  maxOutputTokens: number,
+  enriched?: ModelsDevModel
+): Record<string, unknown> {
+  const attachment = typeof enriched?.attachment === "boolean" ? enriched.attachment : false;
+  const inferredFamily = inferFamily(modelPart);
+  const reasoning =
+    typeof enriched?.reasoning === "boolean"
+      ? enriched.reasoning
+      : inferredFamily === "o1" || inferredFamily === "o3";
+  const temperature = typeof enriched?.temperature === "boolean" ? enriched.temperature : true;
+  const toolCall = typeof enriched?.tool_call === "boolean" ? enriched.tool_call : true;
+  const context =
+    typeof enriched?.limit?.context === "number" && enriched.limit.context > 0
+      ? enriched.limit.context
+      : contextWindow;
+  const output =
+    typeof enriched?.limit?.output === "number" && enriched.limit.output > 0
+      ? enriched.limit.output
+      : maxOutputTokens;
+  const releaseDate =
+    typeof enriched?.release_date === "string" && enriched.release_date.trim()
+      ? enriched.release_date
+      : toDate(upstream.created);
+  const displayName =
+    typeof enriched?.name === "string" && enriched.name.trim() ? enriched.name : modelPart;
+
+  const inputModalities = ["text", ...(attachment ? ["image", "pdf"] : [])];
+
+  return {
+    id: upstream.id,
+    name: displayName,
+    temperature,
+    reasoning,
+    attachment,
+    tool_call: toolCall,
+    modalities: { input: inputModalities, output: ["text"] },
+    limit: { context, output },
+    cost: { input: 0, output: 0, cache_read: 0, cache_write: 0 },
+    provider: { npm: "@ai-sdk/openai-compatible", api: baseURL },
+    status: "active",
+    release_date: releaseDate,
+  };
+}
+
 export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions = {}) {
   const {
     providerId,
@@ -828,119 +884,313 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
     ...options
   };
 
-  return async (_input: PluginInput): Promise<Hooks> => ({
-    provider: {
-      id: providerId,
-      models: async (
-        provider: ProviderConfig,
-        context?: { auth?: { type?: string; key?: string } }
-      ): Promise<Record<string, OpenCodeModel>> => {
-        const staticModels = provider.models ?? {};
-        const modelsDevCatalog = await fetchModelsDevCatalog(
-          modelsDevCatalogURL,
-          modelsDevTimeoutMs,
-          modelsDevCacheTtlMs
-        );
-        const modelsDevLookup = modelsDevCatalog ? buildModelsDevLookup(modelsDevCatalog) : undefined;
-        const settings = await readSettings(providerId);
-        // Probe several places where opencode may surface the API key:
-        //  1. env var
-        //  2. context.auth.key (from auth.json, regardless of type field)
-        //  3. provider.key (direct config)
-        //  4. provider.options?.apiKey (loader return value landing spot)
-        const optionsApiKey =
-          isObjectRecord(provider.options) && typeof provider.options.apiKey === "string"
-            ? provider.options.apiKey
-            : undefined;
-        const apiKey =
-          pickApiKey(process.env[apiKeyEnvName], context?.auth, provider.key) || optionsApiKey || "";
+  return async (_input: PluginInput): Promise<Hooks> => {
+    // Tracks whether the config hook successfully injected sub-providers.
+    // Used by the provider.models hook to decide whether to return a flat list
+    // (fallback) or only standalone models (sub-providers active).
+    let subProvidersInjected = false;
 
-        // Always attempt model discovery — the endpoint may be public.
-        // An empty apiKey simply omits the Authorization header.
-        const baseURL = pickBaseURL(provider, defaultBaseURL, settings.baseURL);
+    return {
+      // ------------------------------------------------------------------ //
+      // config hook — runs early, before provider models are loaded.         //
+      // Injects one virtual provider per 9Router sub-provider alias so      //
+      // OpenCode shows separate groups (e.g., "9Router - Antigravity").     //
+      // ------------------------------------------------------------------ //
+      config: async (cfg: Record<string, unknown>): Promise<void> => {
+        try {
+          // Resolve the API key: env var takes priority, then persisted settings
+          // (written by a previous provider.models run via opencode auth).
+          const settings = await readSettings(providerId);
+          const apiKey =
+            process.env[apiKeyEnvName] ||
+            (isObjectRecord(cfg?.provider) &&
+            isObjectRecord((cfg.provider as Record<string, unknown>)[providerId]) &&
+            typeof ((cfg.provider as Record<string, unknown>)[providerId] as Record<string, unknown>).key === "string"
+              ? ((cfg.provider as Record<string, unknown>)[providerId] as Record<string, unknown>).key as string
+              : "") ||
+            settings.apiKey ||
+            "";
 
-        const upstreamModels = await fetchModels(baseURL, apiKey);
-        if (!upstreamModels) {
-          process.stderr.write(
-            `[opencode-9router-plugin] models hook: fetch failed, returning ${Object.keys(staticModels).length} static model(s)\n`
-          );
-          return staticModels;
-        }
-
-        process.stderr.write(
-          `[opencode-9router-plugin] models hook: building ${upstreamModels.length} dynamic model(s)\n`
-        );
-
-        const dynamicModels = upstreamModels
-          .filter((model) => regexPass(includeModelIdRegex, model.id))
-          .filter((model) => !excludeModelIdRegex || !regexPass(excludeModelIdRegex, model.id))
-          .reduce<Record<string, OpenCodeModel>>((acc, model) => {
-            const enriched = findEnrichedModel(model.id, modelsDevLookup);
-            acc[model.id] = toOpenCodeModel(
-              model,
-              providerId,
-              baseURL,
-              defaultContextWindow,
-              defaultMaxOutputTokens,
-              enriched
+          if (!apiKey) {
+            process.stderr.write(
+              `[opencode-9router-plugin] config hook: no API key available, skipping sub-provider injection\n`
             );
-            return acc;
-          }, {});
-
-        const result = {
-          ...staticModels,
-          ...dynamicModels
-        };
-        process.stderr.write(
-          `[opencode-9router-plugin] models hook: returning ${Object.keys(result).length} total model(s)\n`
-        );
-        return result;
-      }
-    },
-    auth: {
-      provider: providerId,
-      loader: async (getAuth, provider) => {
-        const auth = await getAuth().catch(() => undefined);
-        const settings = await readSettings(providerId);
-        return {
-          apiKey: pickApiKey(process.env[apiKeyEnvName], auth, (provider as ProviderConfig | undefined)?.key),
-          baseURL: pickBaseURL(provider as ProviderConfig | undefined, defaultBaseURL, settings.baseURL)
-        };
-      },
-      methods: [
-        {
-          type: "api",
-          label: "Login with 9Router API key",
-          prompts: [
-            {
-              type: "text",
-              key: "baseURL",
-              message: "Enter your 9Router base URL",
-              placeholder: defaultBaseURL,
-              validate: validateBaseURL
-            }
-          ],
-          authorize: async (inputs = {}) => {
-            const baseURLInput = typeof inputs.baseURL === "string" ? inputs.baseURL : defaultBaseURL;
-            const error = validateBaseURL(baseURLInput);
-            if (!error) {
-              await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput) });
-            }
-            // Ensure opencode.json has this provider listed so opencode will
-            // call the provider.models hook. Without this entry opencode never
-            // invokes the hook and no models are discovered.
-            await ensureProviderInOpenCodeConfig(providerId);
-            // Only return the key if opencode explicitly passed it in inputs.
-            // If inputs.key is absent/empty, do NOT return an empty key — that
-            // would overwrite the API key that opencode already stored in auth.json
-            // before invoking this authorize callback.
-            const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
-            return apiKey !== undefined ? { type: "success", key: apiKey } : { type: "success" };
+            return;
           }
+
+          // Resolve the base URL
+          const cfgProviderEntry =
+            isObjectRecord(cfg?.provider) &&
+            isObjectRecord((cfg.provider as Record<string, unknown>)[providerId])
+              ? ((cfg.provider as Record<string, unknown>)[providerId] as Record<string, unknown>)
+              : undefined;
+          const baseURL =
+            (typeof cfgProviderEntry?.api === "string" && cfgProviderEntry.api.trim()
+              ? normalizeBaseURLInput(cfgProviderEntry.api)
+              : undefined) ||
+            (typeof cfgProviderEntry?.baseURL === "string" && cfgProviderEntry.baseURL.trim()
+              ? normalizeBaseURLInput(cfgProviderEntry.baseURL)
+              : undefined) ||
+            settings.baseURL ||
+            defaultBaseURL;
+
+          // Fetch available models
+          const upstreamModels = await fetchModels(baseURL, apiKey);
+          if (!upstreamModels) {
+            process.stderr.write(
+              `[opencode-9router-plugin] config hook: model fetch failed, skipping sub-provider injection\n`
+            );
+            return;
+          }
+
+          // Apply include/exclude filters
+          const filtered = upstreamModels
+            .filter((m) => regexPass(includeModelIdRegex, m.id))
+            .filter((m) => !excludeModelIdRegex || !regexPass(excludeModelIdRegex, m.id));
+
+          if (filtered.length === 0) {
+            process.stderr.write(
+              `[opencode-9router-plugin] config hook: no models after filtering, skipping\n`
+            );
+            return;
+          }
+
+          // Enrich from models.dev
+          const catalog = await fetchModelsDevCatalog(
+            modelsDevCatalogURL,
+            modelsDevTimeoutMs,
+            modelsDevCacheTtlMs
+          );
+          const lookup = catalog ? buildModelsDevLookup(catalog) : undefined;
+
+          // Group models by sub-provider alias
+          const groups = new Map<string, UpstreamModel[]>();
+          for (const model of filtered) {
+            const [alias] = splitProviderAlias(model.id);
+            const group = alias ?? "_standalone";
+            const arr = groups.get(group) ?? [];
+            arr.push(model);
+            groups.set(group, arr);
+          }
+
+          // Inject one virtual provider per sub-provider alias into the config.
+          // OpenCode reads cfg.provider after all config() hooks run, so these
+          // entries will appear as regular config providers in the model picker.
+          if (!isObjectRecord(cfg.provider)) {
+            cfg.provider = {};
+          }
+          const cfgProvider = cfg.provider as Record<string, unknown>;
+
+          let injectedCount = 0;
+          for (const [alias, models] of groups) {
+            if (alias === "_standalone") {
+              // Standalone models (no prefix) are handled by the provider.models hook
+              continue;
+            }
+            const subId = `${providerId}-${alias}`;
+            const subName = `9Router - ${providerDisplayName(alias)}`;
+
+            const modelConfigs: Record<string, unknown> = {};
+            for (const model of models) {
+              const [, modelPart] = splitProviderAlias(model.id);
+              const enriched = findEnrichedModel(model.id, lookup);
+              modelConfigs[model.id] = buildConfigModelEntry(
+                model,
+                modelPart,
+                baseURL,
+                defaultContextWindow,
+                defaultMaxOutputTokens,
+                enriched
+              );
+            }
+
+            cfgProvider[subId] = {
+              name: subName,
+              env: [apiKeyEnvName],
+              models: modelConfigs,
+            };
+            injectedCount++;
+          }
+
+          subProvidersInjected = injectedCount > 0;
+          process.stderr.write(
+            `[opencode-9router-plugin] config hook: injected ${injectedCount} sub-provider(s) ` +
+              `(${filtered.length} total model(s))\n`
+          );
+        } catch (err) {
+          process.stderr.write(
+            `[opencode-9router-plugin] config hook error (will fall back to flat list): ${String(err)}\n`
+          );
         }
-      ]
-    }
-  });
+      },
+
+      provider: {
+        id: providerId,
+        models: async (
+          provider: ProviderConfig,
+          context?: { auth?: { type?: string; key?: string } }
+        ): Promise<Record<string, OpenCodeModel>> => {
+          const staticModels = provider.models ?? {};
+          const settings = await readSettings(providerId);
+          // Probe several places where opencode may surface the API key:
+          //  1. env var
+          //  2. context.auth.key (from auth.json, regardless of type field)
+          //  3. provider.key (direct config)
+          //  4. provider.options?.apiKey (loader return value landing spot)
+          const optionsApiKey =
+            isObjectRecord(provider.options) && typeof provider.options.apiKey === "string"
+              ? provider.options.apiKey
+              : undefined;
+          const apiKey =
+            pickApiKey(process.env[apiKeyEnvName], context?.auth, provider.key) || optionsApiKey || "";
+
+          // Persist the resolved API key so the config hook can use it on the
+          // next startup when the key comes from opencode's auth system (not env var).
+          if (apiKey && apiKey !== settings.apiKey) {
+            await writeSettings(providerId, { ...settings, apiKey }).catch(() => undefined);
+          }
+
+          const baseURL = pickBaseURL(provider, defaultBaseURL, settings.baseURL);
+
+          // When sub-providers have been injected by the config hook each named
+          // sub-provider manages its own model group.  The provider.models hook
+          // only needs to return models that have NO alias prefix (standalone).
+          // If there are none, returning {} causes this provider group to be
+          // hidden automatically by opencode (empty providers are pruned).
+          if (subProvidersInjected) {
+            const upstreamModels = await fetchModels(baseURL, apiKey);
+            const modelsDevCatalog = await fetchModelsDevCatalog(
+              modelsDevCatalogURL,
+              modelsDevTimeoutMs,
+              modelsDevCacheTtlMs
+            );
+            const modelsDevLookup = modelsDevCatalog ? buildModelsDevLookup(modelsDevCatalog) : undefined;
+
+            const standaloneModels: Record<string, OpenCodeModel> = {};
+            if (upstreamModels) {
+              for (const model of upstreamModels) {
+                const [alias] = splitProviderAlias(model.id);
+                if (alias) continue; // handled by sub-provider
+                if (!regexPass(includeModelIdRegex, model.id)) continue;
+                if (excludeModelIdRegex && regexPass(excludeModelIdRegex, model.id)) continue;
+                const enriched = findEnrichedModel(model.id, modelsDevLookup);
+                standaloneModels[model.id] = toOpenCodeModel(
+                  model,
+                  providerId,
+                  baseURL,
+                  defaultContextWindow,
+                  defaultMaxOutputTokens,
+                  enriched
+                );
+              }
+            }
+            // Also include any explicitly configured static standalone models
+            for (const [id, m] of Object.entries(staticModels)) {
+              const [alias] = splitProviderAlias(id);
+              if (!alias) standaloneModels[id] = m;
+            }
+            process.stderr.write(
+              `[opencode-9router-plugin] models hook (sub-providers active): ` +
+                `${Object.keys(standaloneModels).length} standalone model(s)\n`
+            );
+            return standaloneModels;
+          }
+
+          // ----------------------------------------------------------------
+          // Fallback: config hook did not inject sub-providers (no API key at
+          // config time, or API was unreachable).  Return all models as a flat
+          // list under the main provider group.
+          // ----------------------------------------------------------------
+          const modelsDevCatalog = await fetchModelsDevCatalog(
+            modelsDevCatalogURL,
+            modelsDevTimeoutMs,
+            modelsDevCacheTtlMs
+          );
+          const modelsDevLookup = modelsDevCatalog ? buildModelsDevLookup(modelsDevCatalog) : undefined;
+
+          const upstreamModels = await fetchModels(baseURL, apiKey);
+          if (!upstreamModels) {
+            process.stderr.write(
+              `[opencode-9router-plugin] models hook: fetch failed, returning ${Object.keys(staticModels).length} static model(s)\n`
+            );
+            return staticModels;
+          }
+
+          process.stderr.write(
+            `[opencode-9router-plugin] models hook: building ${upstreamModels.length} dynamic model(s)\n`
+          );
+
+          const dynamicModels = upstreamModels
+            .filter((model) => regexPass(includeModelIdRegex, model.id))
+            .filter((model) => !excludeModelIdRegex || !regexPass(excludeModelIdRegex, model.id))
+            .reduce<Record<string, OpenCodeModel>>((acc, model) => {
+              const enriched = findEnrichedModel(model.id, modelsDevLookup);
+              acc[model.id] = toOpenCodeModel(
+                model,
+                providerId,
+                baseURL,
+                defaultContextWindow,
+                defaultMaxOutputTokens,
+                enriched
+              );
+              return acc;
+            }, {});
+
+          const result = {
+            ...staticModels,
+            ...dynamicModels
+          };
+          process.stderr.write(
+            `[opencode-9router-plugin] models hook: returning ${Object.keys(result).length} total model(s)\n`
+          );
+          return result;
+        }
+      },
+      auth: {
+        provider: providerId,
+        loader: async (getAuth, provider) => {
+          const auth = await getAuth().catch(() => undefined);
+          const settings = await readSettings(providerId);
+          return {
+            apiKey: pickApiKey(process.env[apiKeyEnvName], auth, (provider as ProviderConfig | undefined)?.key),
+            baseURL: pickBaseURL(provider as ProviderConfig | undefined, defaultBaseURL, settings.baseURL)
+          };
+        },
+        methods: [
+          {
+            type: "api",
+            label: "Login with 9Router API key",
+            prompts: [
+              {
+                type: "text",
+                key: "baseURL",
+                message: "Enter your 9Router base URL",
+                placeholder: defaultBaseURL,
+                validate: validateBaseURL
+              }
+            ],
+            authorize: async (inputs = {}) => {
+              const baseURLInput = typeof inputs.baseURL === "string" ? inputs.baseURL : defaultBaseURL;
+              const error = validateBaseURL(baseURLInput);
+              if (!error) {
+                await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput) });
+              }
+              // Ensure opencode.json has this provider listed so opencode will
+              // call the provider.models hook. Without this entry opencode never
+              // invokes the hook and no models are discovered.
+              await ensureProviderInOpenCodeConfig(providerId);
+              // Only return the key if opencode explicitly passed it in inputs.
+              // If inputs.key is absent/empty, do NOT return an empty key — that
+              // would overwrite the API key that opencode already stored in auth.json
+              // before invoking this authorize callback.
+              const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
+              return apiKey !== undefined ? { type: "success", key: apiKey } : { type: "success" };
+            }
+          }
+        ]
+      }
+    };
+  };
 }
 
 const plugin = createOpenAICompatibleModelsPlugin();
