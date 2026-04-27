@@ -1,5 +1,5 @@
 {
-  "name": "opencode-9router-plugin",
+  "name": "@dendaio/opencode-9router-plugin",
   "version": "0.1.0",
   "description": "OpenCode plugin for OpenAI-compatible auto model discovery",
   "type": "module",
