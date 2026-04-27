@@ -16,6 +16,23 @@ Add the plugin to your OpenCode config file (`~/.config/opencode/opencode.json`)
 
 OpenCode will automatically resolve and load the plugin on next startup.
 
+### Why `providers` is required
+
+OpenCode only calls a plugin's `provider.models` hook for providers that appear in the `providers` section of `opencode.json`. Without an entry there, the models hook is silently skipped and no models are discovered.
+
+The plugin handles this automatically: when you run `opencode auth login` and complete the 9router login flow, the plugin writes `"9router": {}` to `opencode.json` for you. After that, restart opencode once and `opencode models` will show the 9router models.
+
+If you prefer to add it manually (or if the auto-registration does not trigger), add the entry yourself:
+
+```json
+{
+  "plugin": ["@dendaio/opencode-9router-plugin"],
+  "providers": {
+    "9router": {}
+  }
+}
+```
+
 ## Local Development
 
 Use this workflow when developing or testing the plugin directly from source (e.g. inside a Codespace or local clone of this repo).
@@ -36,7 +53,10 @@ Add the **absolute path** to the built entrypoint in `~/.config/opencode/opencod
 
 ```json
 {
-  "plugin": ["/workspaces/opencode-9router-connector/dist/index.js"]
+  "plugin": ["/workspaces/opencode-9router-connector/dist/index.js"],
+  "providers": {
+    "9router": {}
+  }
 }
 ```
 

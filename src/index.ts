@@ -406,6 +406,53 @@ function settingsFilePath(providerId: string): string {
   return path.join(os.homedir(), ".config", "opencode", `opencode-9router-plugin.${providerId}.json`);
 }
 
+function openCodeConfigPath(): string {
+  return path.join(os.homedir(), ".config", "opencode", "opencode.json");
+}
+
+/**
+ * Ensure the provider is listed under `providers` in opencode.json so that
+ * opencode will invoke the plugin's `provider.models` hook on startup.
+ *
+ * Opencode only calls `provider.models` for providers that exist in its active
+ * registry, which is built from the `providers` section of opencode.json.
+ * Without this entry the models hook is silently skipped regardless of whether
+ * the user has valid credentials.
+ */
+async function ensureProviderInOpenCodeConfig(providerId: string): Promise<void> {
+  const file = openCodeConfigPath();
+  let config: Record<string, unknown> = {};
+  try {
+    const raw = await readFile(file, "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      config = parsed as Record<string, unknown>;
+    }
+  } catch {
+    // file does not exist yet — start from scratch
+  }
+
+  const providers = config.providers;
+  const providersObj: Record<string, unknown> =
+    providers && typeof providers === "object" && !Array.isArray(providers)
+      ? (providers as Record<string, unknown>)
+      : {};
+
+  if (typeof providersObj[providerId] !== "undefined") {
+    // already registered — nothing to do
+    return;
+  }
+
+  providersObj[providerId] = {};
+  config.providers = providersObj;
+
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+  process.stderr.write(
+    `[opencode-9router-plugin] registered "${providerId}" in ${file} — restart opencode to load models\n`
+  );
+}
+
 async function readSettings(providerId: string): Promise<PluginSettings> {
   const file = settingsFilePath(providerId);
   try {
@@ -812,6 +859,10 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             if (!error) {
               await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput) });
             }
+            // Ensure opencode.json has this provider listed so opencode will
+            // call the provider.models hook. Without this entry opencode never
+            // invokes the hook and no models are discovered.
+            await ensureProviderInOpenCodeConfig(providerId);
             // Only return the key if opencode explicitly passed it in inputs.
             // If inputs.key is absent/empty, do NOT return an empty key — that
             // would overwrite the API key that opencode already stored in auth.json
