@@ -1007,6 +1007,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             cfgProvider[subId] = {
               name: subName,
               env: [apiKeyEnvName],
+              key: apiKey,
               models: modelConfigs,
             };
             injectedCount++;
