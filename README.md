@@ -10,7 +10,7 @@ Add the plugin to your OpenCode config file (`~/.config/opencode/opencode.json`)
 
 ```json
 {
-  "plugins": ["@dendaio/opencode-9router-plugin"]
+  "plugin": ["@dendaio/opencode-9router-plugin"]
 }
 ```
 
@@ -20,6 +20,8 @@ OpenCode will automatically resolve and load the plugin on next startup.
 
 Use this workflow when developing or testing the plugin directly from source (e.g. inside a Codespace or local clone of this repo).
 
+> **Note**: OpenCode installs npm plugins using its own internal resolver (not `npm link`). For local development you must point the config at your built file directly.
+
 ### 1. Install dependencies and build
 
 ```bash
@@ -27,25 +29,19 @@ npm install
 npm run build
 ```
 
-### 2. Link the package globally
+### 2. Configure OpenCode to load from the local build
 
-```bash
-npm link
-```
-
-This creates a global symlink pointing to your local `dist/` so OpenCode can resolve `@dendaio/opencode-9router-plugin` without publishing to npm.
-
-### 3. Configure OpenCode to use the plugin
-
-Add to `~/.config/opencode/opencode.json`:
+Add the **absolute path** to the built entrypoint in `~/.config/opencode/opencode.json`:
 
 ```json
 {
-  "plugins": ["@dendaio/opencode-9router-plugin"]
+  "plugin": ["/absolute/path/to/opencode-9router-connector/dist/index.js"]
 }
 ```
 
-### 4. Watch mode for active development
+Replace `/absolute/path/to/opencode-9router-connector` with the actual path to your clone.
+
+### 3. Watch mode for active development
 
 In one terminal, start the incremental rebuild watcher:
 
@@ -61,7 +57,7 @@ opencode
 
 Changes to source files are rebuilt automatically; restart OpenCode to pick them up.
 
-### 5. Verify the plugin loaded
+### 4. Verify the plugin loaded
 
 Inside OpenCode, run:
 
@@ -142,7 +138,7 @@ import plugin, { createOpenAICompatibleModelsPlugin } from "opencode-9router-plu
 
 // Use default instance
 export default {
-  plugins: [plugin]
+  plugin: [plugin]
 };
 
 // Or customize

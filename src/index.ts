@@ -784,4 +784,4 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
 
 const plugin = createOpenAICompatibleModelsPlugin();
 
-export default { server: plugin } satisfies PluginModule;
+export default { id: "9router", server: plugin } satisfies PluginModule;
