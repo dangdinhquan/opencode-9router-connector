@@ -497,6 +497,11 @@ async function fetchModels(
   apiKey: string
 ): Promise<UpstreamModel[] | null> {
   const url = normalizeModelsURL(baseURL);
+  const keyLabel = apiKey ? `${apiKey.slice(0, 8)}…` : "(none → using anonymous)";
+
+  process.stderr.write(
+    `[opencode-9router-plugin] fetchModels → GET ${url}  key=${keyLabel}\n`
+  );
 
   const headers: Record<string, string> = {
     // Always send an Authorization header. The gateway is public and accepts
@@ -510,22 +515,34 @@ async function fetchModels(
       headers
     });
 
+    process.stderr.write(
+      `[opencode-9router-plugin] fetchModels ← ${response.status} ${response.statusText}\n`
+    );
+
     if (!response.ok) {
-      console.warn(
-        `[opencode-9router-plugin] model discovery failed (${response.status} ${response.statusText})`
+      const body = await response.text().catch(() => "");
+      process.stderr.write(
+        `[opencode-9router-plugin] fetchModels error body: ${body.slice(0, 300)}\n`
       );
       return null;
     }
 
     const payload = (await response.json()) as unknown;
     if (!isValidModelList(payload)) {
-      console.warn("[opencode-9router-plugin] model discovery failed (invalid /models schema)");
+      process.stderr.write(
+        `[opencode-9router-plugin] fetchModels invalid /models schema: ${JSON.stringify(payload).slice(0, 300)}\n`
+      );
       return null;
     }
 
+    process.stderr.write(
+      `[opencode-9router-plugin] fetchModels success: ${payload.data.length} models\n`
+    );
     return payload.data;
-  } catch {
-    console.warn("[opencode-9router-plugin] model discovery failed (request error)");
+  } catch (err) {
+    process.stderr.write(
+      `[opencode-9router-plugin] fetchModels request error: ${String(err)}\n`
+    );
     return null;
   }
 }
@@ -721,10 +738,24 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
         // An empty apiKey simply omits the Authorization header.
         const baseURL = pickBaseURL(provider, defaultBaseURL, settings.baseURL);
 
+        process.stderr.write(
+          `[opencode-9router-plugin] models hook: baseURL=${baseURL}  apiKey=${apiKey ? apiKey.slice(0, 8) + "…" : "(empty)"}\n`
+        );
+        process.stderr.write(
+          `[opencode-9router-plugin] models hook: auth from context=${JSON.stringify(context?.auth ?? null)}\n`
+        );
+
         const upstreamModels = await fetchModels(baseURL, apiKey);
         if (!upstreamModels) {
+          process.stderr.write(
+            `[opencode-9router-plugin] models hook: fetch failed, returning ${Object.keys(staticModels).length} static model(s)\n`
+          );
           return staticModels;
         }
+
+        process.stderr.write(
+          `[opencode-9router-plugin] models hook: building ${upstreamModels.length} dynamic model(s)\n`
+        );
 
         const dynamicModels = upstreamModels
           .filter((model) => regexPass(includeModelIdRegex, model.id))
@@ -742,10 +773,14 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             return acc;
           }, {});
 
-        return {
+        const result = {
           ...staticModels,
           ...dynamicModels
         };
+        process.stderr.write(
+          `[opencode-9router-plugin] models hook: returning ${Object.keys(result).length} total model(s)\n`
+        );
+        return result;
       }
     },
     auth: {
