@@ -154,9 +154,9 @@ type ModelsDevCatalog = Record<string, ModelsDevProvider>;
 const DEFAULT_OPTIONS: Required<
   Omit<RouterPluginOptions, "includeModelIdRegex" | "excludeModelIdRegex">
 > = {
-  providerId: "myopenai",
+  providerId: "9router",
   defaultBaseURL: "https://api.openai.com/v1",
-  apiKeyEnvName: "MYOPENAI_API_KEY",
+  apiKeyEnvName: "ROUTER9_API_KEY",
   defaultContextWindow: 128000,
   defaultMaxOutputTokens: 8192,
   modelsDevCatalogURL: "https://models.dev/api.json",
@@ -177,7 +177,7 @@ type ModelsDevCache = {
 let modelsDevCache: ModelsDevCache | undefined;
 
 const PROVIDER_ALIAS_TO_NAME: Record<string, string> = {
-  myopenai: "OpenAI",
+  "9router": "9Router",
   openai: "OpenAI",
   cx: "Codex",
   codex: "Codex",
