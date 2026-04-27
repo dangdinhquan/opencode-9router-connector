@@ -439,7 +439,9 @@ function pickApiKey(
   if (envApiKey) {
     return envApiKey;
   }
-  if (auth?.type === "api" && typeof auth.key === "string") {
+  // Accept the key regardless of the `type` field; opencode may store the auth
+  // record with type "success" (from authorize return) or no type at all.
+  if (typeof auth?.key === "string" && auth.key) {
     return auth.key;
   }
   if (typeof providerKey === "string" && providerKey) {
@@ -699,7 +701,17 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
         );
         const modelsDevLookup = modelsDevCatalog ? buildModelsDevLookup(modelsDevCatalog) : undefined;
         const settings = await readSettings(providerId);
-        const apiKey = pickApiKey(process.env[apiKeyEnvName], context?.auth, provider.key);
+        // Probe several places where opencode may surface the API key:
+        //  1. env var
+        //  2. context.auth.key (from auth.json, regardless of type field)
+        //  3. provider.key (direct config)
+        //  4. provider.options?.apiKey (loader return value landing spot)
+        const optionsApiKey =
+          isObjectRecord(provider.options) && typeof provider.options.apiKey === "string"
+            ? provider.options.apiKey
+            : undefined;
+        const apiKey =
+          pickApiKey(process.env[apiKeyEnvName], context?.auth, provider.key) || optionsApiKey || "";
 
         if (!apiKey) {
           return staticModels;
