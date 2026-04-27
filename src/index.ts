@@ -176,29 +176,110 @@ type ModelsDevCache = {
 
 let modelsDevCache: ModelsDevCache | undefined;
 
+// Provider alias → display name mapping.
+// Aliases are sourced from 9router's provider definitions:
+// https://github.com/decolua/9router/blob/main/src/shared/constants/providers.js
 const PROVIDER_ALIAS_TO_NAME: Record<string, string> = {
   "9router": "9Router",
-  openai: "OpenAI",
-  cx: "Codex",
-  codex: "Codex",
-  cc: "Claude",
-  claude: "Claude",
-  gc: "Gemini",
-  gemini: "Gemini",
-  google: "Google",
-  qw: "Qwen",
-  qwen: "Qwen",
-  gh: "GitHub Copilot",
-  gl: "GitHub Copilot",
-  github: "GitHub Copilot",
-  "github-copilot": "GitHub Copilot",
+
+  // Free Providers
+  kr: "Kiro AI",
+  kiro: "Kiro AI",
+  qw: "Qwen Code",
+  qwen: "Qwen Code",
+  gc: "Gemini CLI",
+  "gemini-cli": "Gemini CLI",
+  if: "iFlow AI",
+  iflow: "iFlow AI",
+  iflowcn: "iFlow AI",
+  oc: "OpenCode Free",
+  opencode: "OpenCode Free",
+
+  // OAuth Providers
+  cc: "Claude Code",
+  claude: "Claude Code",
   ag: "Antigravity",
   antigravity: "Antigravity",
+  cx: "OpenAI Codex",
+  codex: "OpenAI Codex",
+  gh: "GitHub Copilot",
+  github: "GitHub Copilot",
+  "github-copilot": "GitHub Copilot",
+  cu: "Cursor IDE",
+  cursor: "Cursor IDE",
+  kc: "Kilo Code",
+  kilocode: "Kilo Code",
+  cl: "Cline",
+  cline: "Cline",
+
+  // Free Tier Providers
+  openrouter: "OpenRouter",
+  nvidia: "NVIDIA NIM",
+  ollama: "Ollama Cloud",
+  vx: "Vertex AI",
+  vertex: "Vertex AI",
+  gemini: "Gemini",
+  google: "Google",
+  bpm: "BytePlus ModelArk",
+  byteplus: "BytePlus ModelArk",
+
+  // API Key Providers
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  ocg: "OpenCode Go",
+  "opencode-go": "OpenCode Go",
+  azure: "Azure OpenAI",
+  ds: "DeepSeek",
+  deepseek: "DeepSeek",
+  groq: "Groq",
+  xai: "xAI (Grok)",
+  mistral: "Mistral",
+  pplx: "Perplexity",
+  perplexity: "Perplexity",
+  together: "Together AI",
+  fireworks: "Fireworks AI",
+  cerebras: "Cerebras",
+  cohere: "Cohere",
+  nebius: "Nebius AI",
+  siliconflow: "SiliconFlow",
+  hyp: "Hyperbolic",
+  hyperbolic: "Hyperbolic",
+  glm: "GLM Coding",
+  "glm-cn": "GLM (China)",
+  kimi: "Kimi",
+  minimax: "Minimax Coding",
+  "minimax-cn": "Minimax (China)",
+  alicode: "Alibaba",
+  "alicode-intl": "Alibaba Intl",
+  ark: "Volcengine Ark",
+  "volcengine-ark": "Volcengine Ark",
+  hf: "HuggingFace",
+  huggingface: "HuggingFace",
+  bb: "Blackbox AI",
+  blackbox: "Blackbox AI",
+  ch: "Chutes AI",
+  chutes: "Chutes AI",
+  "ollama-local": "Ollama Local",
+  vxp: "Vertex Partner",
+  "vertex-partner": "Vertex Partner",
+  dg: "Deepgram",
+  deepgram: "Deepgram",
+  aai: "AssemblyAI",
+  assemblyai: "AssemblyAI",
+  nb: "NanoBanana",
+  nanobanana: "NanoBanana",
+  el: "ElevenLabs",
+  elevenlabs: "ElevenLabs",
+
+  // Web Cookie Providers
+  gw: "Grok Web",
+  "grok-web": "Grok Web",
+  pw: "Perplexity Web",
+  "perplexity-web": "Perplexity Web",
+
+  // Legacy / fallback aliases
   op: "OpenCode",
-  opencode: "OpenCode",
-  if: "IFlow",
-  iflow: "IFlow",
-  iflowcn: "IFlow"
+  gl: "GitHub Copilot"
 };
 
 function normalizeModelsURL(baseURL: string): string {
