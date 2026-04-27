@@ -326,7 +326,28 @@ function inferFamily(modelId: string): string {
   return fallback || "unknown";
 }
 
+/**
+ * Split a 9Router model ID into [providerAlias, modelPart].
+ * 9Router uses `{alias}/{model}` or `{alias}:{model}` conventions.
+ * Returns [undefined, fullId] when no provider prefix is detected.
+ */
+function splitProviderAlias(modelId: string): [string | undefined, string] {
+  const slashIdx = modelId.indexOf("/");
+  const colonIdx = modelId.indexOf(":");
+  const sep = slashIdx !== -1 && (colonIdx === -1 || slashIdx < colonIdx) ? slashIdx : colonIdx;
+  if (sep > 0) {
+    return [modelId.slice(0, sep), modelId.slice(sep + 1)];
+  }
+  return [undefined, modelId];
+}
 
+/**
+ * Map a provider alias to its display name using the known alias table.
+ * Lowercase-normalizes the alias before lookup.
+ */
+function providerDisplayName(alias: string): string {
+  return PROVIDER_ALIAS_TO_NAME[alias.toLowerCase()] ?? alias;
+}
 
 function toOpenCodeModel(
   upstream: UpstreamModel,
@@ -336,10 +357,16 @@ function toOpenCodeModel(
   maxOutputTokens: number,
   enriched?: ModelsDevModel
 ): OpenCodeModel {
-  const family =
-    typeof enriched?.family === "string" && enriched.family.trim()
-      ? enriched.family
-      : inferFamily(upstream.id);
+  const [providerAlias, modelPart] = splitProviderAlias(upstream.id);
+  const providerGroup = providerAlias
+    ? `9Router - ${providerDisplayName(providerAlias)}`
+    : "9Router";
+
+  const family = providerGroup;
+  const displayName =
+    typeof enriched?.name === "string" && enriched.name.trim()
+      ? enriched.name
+      : modelPart;
   const releaseDate =
     typeof enriched?.release_date === "string" && enriched.release_date.trim()
       ? enriched.release_date
@@ -356,14 +383,17 @@ function toOpenCodeModel(
       : maxOutputTokens;
 
   const attachment = typeof enriched?.attachment === "boolean" ? enriched.attachment : false;
+  const inferredFamily = inferFamily(modelPart);
   const reasoning =
-    typeof enriched?.reasoning === "boolean" ? enriched.reasoning : family === "o1" || family === "o3";
+    typeof enriched?.reasoning === "boolean"
+      ? enriched.reasoning
+      : inferredFamily === "o1" || inferredFamily === "o3";
   const temperature = typeof enriched?.temperature === "boolean" ? enriched.temperature : true;
   const toolcall = typeof enriched?.tool_call === "boolean" ? enriched.tool_call : true;
 
   return {
     id: upstream.id,
-    name: upstream.id,
+    name: displayName,
     family,
     release_date: releaseDate,
     api: {
