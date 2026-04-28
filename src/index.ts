@@ -479,12 +479,35 @@ function validateBaseURL(value: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Resolve the opencode configuration directory using the same logic as
+ * opencode itself:
+ *  - Linux / other: $XDG_CONFIG_HOME/opencode  (falls back to ~/.config/opencode)
+ *  - macOS:         ~/Library/Application Support/opencode
+ *  - Windows:       %APPDATA%\opencode
+ */
+function openCodeConfigDir(): string {
+  const home = os.homedir();
+  if (process.platform === "darwin") {
+    return path.join(home, "Library", "Application Support", "opencode");
+  }
+  if (process.platform === "win32") {
+    const appData = process.env.APPDATA;
+    if (appData) return path.join(appData, "opencode");
+    return path.join(home, "AppData", "Roaming", "opencode");
+  }
+  // Linux and everything else: honour XDG_CONFIG_HOME
+  const xdg = process.env.XDG_CONFIG_HOME;
+  const configBase = xdg && path.isAbsolute(xdg) ? xdg : path.join(home, ".config");
+  return path.join(configBase, "opencode");
+}
+
 function settingsFilePath(providerId: string): string {
-  return path.join(os.homedir(), ".config", "opencode", `opencode-9router-plugin.${providerId}.json`);
+  return path.join(openCodeConfigDir(), `opencode-9router-plugin.${providerId}.json`);
 }
 
 function openCodeConfigPath(): string {
-  return path.join(os.homedir(), ".config", "opencode", "opencode.json");
+  return path.join(openCodeConfigDir(), "opencode.json");
 }
 
 /**
