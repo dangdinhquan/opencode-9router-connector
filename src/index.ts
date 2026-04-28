@@ -36,20 +36,10 @@ export interface RouterPluginOptions {
   providerId?: string;
   defaultBaseURL?: string;
   apiKeyEnvName?: string;
-  /** @deprecated Use `modelEnrichment.defaultContextWindow` instead. */
-  defaultContextWindow?: number;
-  /** @deprecated Use `modelEnrichment.defaultMaxOutputTokens` instead. */
-  defaultMaxOutputTokens?: number;
   /** models.dev enrichment configuration. */
   modelEnrichment?: ModelEnrichmentOptions;
   /** Model filtering configuration. */
   modelFiltering?: ModelFilteringOptions;
-  /** @deprecated Use `modelFiltering.includeModelIdRegex` instead. */
-  includeModelIdRegex?: RegExp;
-  /** @deprecated Use `modelFiltering.excludeModelIdRegex` instead. */
-  excludeModelIdRegex?: RegExp;
-  /** @deprecated Use `modelFiltering.includePrefixes` instead. */
-  includePrefixes?: string[];
 }
 
 /** Model format expected by opencode (ModelV2). */
@@ -326,6 +316,48 @@ function toStrictlyPositiveNumber(value: unknown): number | undefined {
     return undefined;
   }
   return value;
+}
+
+function toRegex(value: unknown): RegExp | undefined {
+  if (value instanceof RegExp) return value;
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  const slashDelimited = trimmed.match(/^\/(.+)\/([a-z]*)$/i);
+  if (slashDelimited) {
+    try {
+      return new RegExp(slashDelimited[1], slashDelimited[2]);
+    } catch {
+      return undefined;
+    }
+  }
+
+  try {
+    return new RegExp(trimmed);
+  } catch {
+    return undefined;
+  }
+}
+
+function toStringRecord(value: unknown): Record<string, string> | undefined {
+  if (!isObjectRecord(value)) return undefined;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (typeof v === "string" && v.trim()) {
+      out[k.toLowerCase()] = v.toLowerCase();
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function toStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const out = value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+  return out.length > 0 ? out : undefined;
 }
 
 function firstBoolean(...values: unknown[]): boolean | undefined {
@@ -1000,18 +1032,9 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
     ...DEFAULT_OPTIONS,
     ...options
   };
-  const enrichmentOpts = { ...DEFAULT_MODEL_ENRICHMENT, ...(options.modelEnrichment ?? {}) };
-  const enrichmentEnabled = enrichmentOpts.enabled !== false;
-  const defaultContextWindow = options.modelEnrichment?.defaultContextWindow
-    ?? options.defaultContextWindow
-    ?? DEFAULT_MODEL_ENRICHMENT.defaultContextWindow;
-  const defaultMaxOutputTokens = options.modelEnrichment?.defaultMaxOutputTokens
-    ?? options.defaultMaxOutputTokens
-    ?? DEFAULT_MODEL_ENRICHMENT.defaultMaxOutputTokens;
-  const includePrefixes = options.modelFiltering?.includePrefixes ?? options.includePrefixes;
-  const includeModelIdRegex = options.modelFiltering?.includeModelIdRegex ?? options.includeModelIdRegex;
-  const excludeModelIdRegex = options.modelFiltering?.excludeModelIdRegex ?? options.excludeModelIdRegex;
-  const providerAliases = {
+  const configuredEnrichmentOpts = { ...DEFAULT_MODEL_ENRICHMENT, ...(options.modelEnrichment ?? {}) };
+  const configuredFilteringOpts = options.modelFiltering ?? {};
+  const configuredProviderAliases = {
     ...DEFAULT_MODELS_DEV_PROVIDER_ALIASES,
     ...(options.modelEnrichment?.providerAliases ?? {})
   };
@@ -1024,6 +1047,47 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           provider: ProviderConfig,
           context?: { auth?: { type?: string; key?: string } }
         ): Promise<Record<string, OpenCodeModel>> => {
+          const providerOptions = isObjectRecord(provider.options) ? provider.options : undefined;
+          const providerEnrichment = isObjectRecord(providerOptions?.modelEnrichment)
+            ? providerOptions.modelEnrichment
+            : undefined;
+          const providerFiltering = isObjectRecord(providerOptions?.modelFiltering)
+            ? providerOptions.modelFiltering
+            : undefined;
+
+          const runtimeEnrichmentOpts = {
+            ...configuredEnrichmentOpts,
+            ...(typeof providerEnrichment?.enabled === "boolean" ? { enabled: providerEnrichment.enabled } : {}),
+            ...(typeof providerEnrichment?.catalogURL === "string" && providerEnrichment.catalogURL.trim()
+              ? { catalogURL: providerEnrichment.catalogURL }
+              : {}),
+            ...(toStrictlyPositiveNumber(providerEnrichment?.timeoutMs) !== undefined
+              ? { timeoutMs: toStrictlyPositiveNumber(providerEnrichment?.timeoutMs) }
+              : {}),
+            ...(toStrictlyPositiveNumber(providerEnrichment?.cacheTtlMs) !== undefined
+              ? { cacheTtlMs: toStrictlyPositiveNumber(providerEnrichment?.cacheTtlMs) }
+              : {}),
+            ...(typeof providerEnrichment?.overrideUpstream === "boolean"
+              ? { overrideUpstream: providerEnrichment.overrideUpstream }
+              : {}),
+            ...(toStrictlyPositiveNumber(providerEnrichment?.defaultContextWindow) !== undefined
+              ? { defaultContextWindow: toStrictlyPositiveNumber(providerEnrichment?.defaultContextWindow) }
+              : {}),
+            ...(toStrictlyPositiveNumber(providerEnrichment?.defaultMaxOutputTokens) !== undefined
+              ? { defaultMaxOutputTokens: toStrictlyPositiveNumber(providerEnrichment?.defaultMaxOutputTokens) }
+              : {})
+          };
+          const runtimeProviderAliases = {
+            ...configuredProviderAliases,
+            ...(toStringRecord(providerEnrichment?.providerAliases) ?? {})
+          };
+          const runtimeFilteringOpts = {
+            includePrefixes: toStringArray(providerFiltering?.includePrefixes) ?? configuredFilteringOpts.includePrefixes,
+            includeModelIdRegex: toRegex(providerFiltering?.includeModelIdRegex) ?? configuredFilteringOpts.includeModelIdRegex,
+            excludeModelIdRegex: toRegex(providerFiltering?.excludeModelIdRegex) ?? configuredFilteringOpts.excludeModelIdRegex
+          };
+          const enrichmentEnabled = runtimeEnrichmentOpts.enabled !== false;
+
           const staticModels = provider.models ?? {};
           const settings = await readSettings(providerId);
           // Probe several places where opencode may surface the API key:
@@ -1046,7 +1110,11 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
 
           const baseURL = pickBaseURL(provider, defaultBaseURL, settings.baseURL);
           const modelsDevCatalog = enrichmentEnabled
-            ? await fetchModelsDevCatalog(enrichmentOpts.catalogURL, enrichmentOpts.timeoutMs, enrichmentOpts.cacheTtlMs)
+            ? await fetchModelsDevCatalog(
+              runtimeEnrichmentOpts.catalogURL,
+              runtimeEnrichmentOpts.timeoutMs,
+              runtimeEnrichmentOpts.cacheTtlMs
+            )
             : undefined;
           const modelsDevIndex = modelsDevCatalog ? buildModelsDevIndex(modelsDevCatalog) : undefined;
 
@@ -1063,20 +1131,21 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           );
 
           const dynamicModels = upstreamModels
-            .filter((model) => regexPass(includeModelIdRegex, model.id))
-            .filter((model) => !excludeModelIdRegex || !regexPass(excludeModelIdRegex, model.id))
-            .filter((model) => prefixPass(includePrefixes, model.id, providerId))
+            .filter((model) => regexPass(runtimeFilteringOpts.includeModelIdRegex, model.id))
+            .filter((model) => !runtimeFilteringOpts.excludeModelIdRegex
+              || !regexPass(runtimeFilteringOpts.excludeModelIdRegex, model.id))
+            .filter((model) => prefixPass(runtimeFilteringOpts.includePrefixes, model.id, providerId))
             .reduce<Record<string, OpenCodeModel>>((acc, model) => {
-              const enriched = findEnrichedModel(model.id, providerId, modelsDevIndex, providerAliases);
+              const enriched = findEnrichedModel(model.id, providerId, modelsDevIndex, runtimeProviderAliases);
               acc[model.id] = toOpenCodeModel(
                 model,
                 providerId,
                 baseURL,
-                defaultContextWindow,
-                defaultMaxOutputTokens,
+                runtimeEnrichmentOpts.defaultContextWindow,
+                runtimeEnrichmentOpts.defaultMaxOutputTokens,
                 enriched,
                 apiKey,
-                enrichmentOpts.overrideUpstream
+                runtimeEnrichmentOpts.overrideUpstream
               );
               return acc;
             }, {});

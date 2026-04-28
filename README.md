@@ -135,6 +135,27 @@ You can change the env var name with `apiKeyEnvName` in plugin options.
       // Defaults to https://llm-gateway.denda.cloud/v1 if not specified.
       "api": "https://llm-gateway.denda.cloud/v1",
       // "baseURL": "https://llm-gateway.denda.cloud/v1",
+      "options": {
+        "modelEnrichment": {
+          "enabled": true,
+          "catalogURL": "https://models.dev/api.json",
+          "timeoutMs": 3000,
+          "cacheTtlMs": 600000,
+          "overrideUpstream": false,
+          "defaultContextWindow": 128000,
+          "defaultMaxOutputTokens": 8192,
+          "providerAliases": {
+            "gh": "github",
+            "cx": "openai"
+          }
+        },
+        "modelFiltering": {
+          "includePrefixes": ["gh", "cx", "cc"],
+          // Regex can be plain pattern ("^gpt|^o\\d") or slash form ("/^gpt|^o\\d/i")
+          "includeModelIdRegex": "/^gpt|^o\\d/i",
+          "excludeModelIdRegex": "/audio|embedding/i"
+        }
+      },
       "models": {
         // Static fallback models. Dynamic discovery overrides by model id.
         "gpt-4o-mini": {
