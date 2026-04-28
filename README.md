@@ -169,19 +169,21 @@ const customPlugin = createOpenAICompatibleModelsPlugin({
   providerId: "9router",
   defaultBaseURL: "https://llm-gateway.denda.cloud/v1",
   apiKeyEnvName: "ROUTER9_API_KEY",
-  defaultContextWindow: 128000,
-  defaultMaxOutputTokens: 8192,
   modelEnrichment: {
     enabled: true,
     catalogURL: "https://models.dev/api.json",
     timeoutMs: 3000,
     cacheTtlMs: 600000,
     overrideUpstream: false,
+    defaultContextWindow: 128000,
+    defaultMaxOutputTokens: 8192,
     providerAliases: { gh: "github", cx: "openai" }
   },
-  includePrefixes: ["gh", "cx", "cc"],
-  includeModelIdRegex: /^gpt|^o\d/i,
-  excludeModelIdRegex: /audio|embedding/i
+  modelFiltering: {
+    includePrefixes: ["gh", "cx", "cc"],
+    includeModelIdRegex: /^gpt|^o\d/i,
+    excludeModelIdRegex: /audio|embedding/i
+  }
 });
 ```
 
@@ -226,7 +228,15 @@ If no models.dev match is found, safe defaults are used:
 - `temperature: true`
 - `tool_call: true`
 - `reasoning: true` only for inferred `o1` and `o3` families
-- `limit.context` and `limit.output` from plugin defaults
+- `limit.context` and `limit.output` from `modelEnrichment.defaultContextWindow` and `modelEnrichment.defaultMaxOutputTokens`
+
+## Model filtering
+
+Use `modelFiltering` to control which upstream models are imported:
+
+- `includePrefixes`: keep only model IDs with allowed provider prefixes (e.g. `gh/*`, `cx/*`).
+- `includeModelIdRegex`: allow-list by model ID regex.
+- `excludeModelIdRegex`: block-list by model ID regex (applied after include filters).
 
 ## Troubleshooting
 

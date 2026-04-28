@@ -16,20 +16,37 @@ export interface ModelEnrichmentOptions {
   overrideUpstream?: boolean;
   /** Maps gateway provider prefixes to models.dev provider keys (e.g. `{ gh: "github" }`). */
   providerAliases?: Record<string, string>;
+  /** Fallback context window when upstream + models.dev do not provide limits. */
+  defaultContextWindow?: number;
+  /** Fallback max output tokens when upstream + models.dev do not provide limits. */
+  defaultMaxOutputTokens?: number;
+}
+
+export interface ModelFilteringOptions {
+  /** Only include models whose prefix (the part before the first `/`) is in this list.
+   * Comparison is case-insensitive. When omitted or empty, all prefixes are allowed. */
+  includePrefixes?: string[];
+  includeModelIdRegex?: RegExp;
+  excludeModelIdRegex?: RegExp;
 }
 
 export interface RouterPluginOptions {
   providerId?: string;
   defaultBaseURL?: string;
   apiKeyEnvName?: string;
+  /** @deprecated Use `modelEnrichment.defaultContextWindow` instead. */
   defaultContextWindow?: number;
+  /** @deprecated Use `modelEnrichment.defaultMaxOutputTokens` instead. */
   defaultMaxOutputTokens?: number;
   /** models.dev enrichment configuration. */
   modelEnrichment?: ModelEnrichmentOptions;
+  /** Model filtering configuration. */
+  modelFiltering?: ModelFilteringOptions;
+  /** @deprecated Use `modelFiltering.includeModelIdRegex` instead. */
   includeModelIdRegex?: RegExp;
+  /** @deprecated Use `modelFiltering.excludeModelIdRegex` instead. */
   excludeModelIdRegex?: RegExp;
-  /** Only include models whose prefix (the part before the first `/`) is in this list.
-   * Comparison is case-insensitive. When omitted or empty, all prefixes are allowed. */
+  /** @deprecated Use `modelFiltering.includePrefixes` instead. */
   includePrefixes?: string[];
 }
 
@@ -210,11 +227,16 @@ const DEFAULT_MODEL_ENRICHMENT: Required<Omit<ModelEnrichmentOptions, "providerA
   catalogURL: "https://models.dev/api.json",
   timeoutMs: 3000,
   cacheTtlMs: 10 * 60 * 1000,
-  overrideUpstream: false
+  overrideUpstream: false,
+  defaultContextWindow: 128000,
+  defaultMaxOutputTokens: 8192
 };
 
 const DEFAULT_OPTIONS: Required<
-  Omit<RouterPluginOptions, "includeModelIdRegex" | "excludeModelIdRegex" | "modelEnrichment" | "includePrefixes">
+  Omit<
+    RouterPluginOptions,
+    "includeModelIdRegex" | "excludeModelIdRegex" | "modelEnrichment" | "includePrefixes" | "modelFiltering"
+  >
 > = {
   providerId: "9router",
   defaultBaseURL: "https://api.your_9router.com/v1",
@@ -978,21 +1000,21 @@ function findEnrichedModel(
 }
 
 export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions = {}) {
-  const {
-    providerId,
-    defaultBaseURL,
-    apiKeyEnvName,
-    defaultContextWindow,
-    defaultMaxOutputTokens,
-    includeModelIdRegex,
-    excludeModelIdRegex
-  } = {
+  const { providerId, defaultBaseURL, apiKeyEnvName } = {
     ...DEFAULT_OPTIONS,
     ...options
   };
-  const includePrefixes = options.includePrefixes;
   const enrichmentOpts = { ...DEFAULT_MODEL_ENRICHMENT, ...(options.modelEnrichment ?? {}) };
   const enrichmentEnabled = enrichmentOpts.enabled !== false;
+  const defaultContextWindow = options.modelEnrichment?.defaultContextWindow
+    ?? options.defaultContextWindow
+    ?? DEFAULT_MODEL_ENRICHMENT.defaultContextWindow;
+  const defaultMaxOutputTokens = options.modelEnrichment?.defaultMaxOutputTokens
+    ?? options.defaultMaxOutputTokens
+    ?? DEFAULT_MODEL_ENRICHMENT.defaultMaxOutputTokens;
+  const includePrefixes = options.modelFiltering?.includePrefixes ?? options.includePrefixes;
+  const includeModelIdRegex = options.modelFiltering?.includeModelIdRegex ?? options.includeModelIdRegex;
+  const excludeModelIdRegex = options.modelFiltering?.excludeModelIdRegex ?? options.excludeModelIdRegex;
   const providerAliases = {
     ...DEFAULT_MODELS_DEV_PROVIDER_ALIASES,
     ...(options.modelEnrichment?.providerAliases ?? {})
