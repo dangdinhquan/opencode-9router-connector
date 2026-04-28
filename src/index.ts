@@ -1174,6 +1174,16 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
                 message: "Enter your 9Router base URL",
                 placeholder: defaultBaseURL,
                 validate: validateBaseURL
+              },
+              {
+                type: "text",
+                key: "key",
+                message: "Enter your 9Router API key",
+                placeholder: "sk-...",
+                validate: (value: string) => {
+                  if (!value.trim()) return "API key is required";
+                  return undefined;
+                }
               }
             ],
             authorize: async (inputs = {}) => {
@@ -1186,11 +1196,12 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
               // call the provider.models hook. Without this entry opencode never
               // invokes the hook and no models are discovered.
               await ensureProviderInOpenCodeConfig(providerId);
-              // Only return the key if opencode explicitly passed it in inputs.
-              // If inputs.key is absent/empty, do NOT return an empty key — that
-              // would overwrite the API key that opencode already stored in auth.json
-              // before invoking this authorize callback.
+              // Persist the API key to settings so the config hook can use it
+              // on next startup (before provider.models is called).
               const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
+              if (apiKey) {
+                await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput), apiKey }).catch(() => undefined);
+              }
               return apiKey !== undefined ? { type: "success", key: apiKey } : { type: "success" };
             }
           }
