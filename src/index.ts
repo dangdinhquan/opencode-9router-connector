@@ -324,8 +324,11 @@ function toRegex(value: unknown): RegExp | undefined {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
 
-  const slashDelimited = trimmed.match(/^\/(.+)\/([a-z]*)$/i);
+  const slashDelimited = trimmed.match(/^\/(.+)\/([a-zA-Z]*)$/);
   if (slashDelimited) {
+    if (!/^[gimsuy]*$/.test(slashDelimited[2])) {
+      return undefined;
+    }
     try {
       return new RegExp(slashDelimited[1], slashDelimited[2]);
     } catch {
@@ -345,7 +348,7 @@ function toStringRecord(value: unknown): Record<string, string> | undefined {
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(value)) {
     if (typeof v === "string" && v.trim()) {
-      out[k.toLowerCase()] = v.toLowerCase();
+      out[k.toLowerCase()] = v.trim();
     }
   }
   return Object.keys(out).length > 0 ? out : undefined;
@@ -353,11 +356,10 @@ function toStringRecord(value: unknown): Record<string, string> | undefined {
 
 function toStringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
-  const out = value
+  return value
     .filter((item): item is string => typeof item === "string")
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
-  return out.length > 0 ? out : undefined;
 }
 
 function firstBoolean(...values: unknown[]): boolean | undefined {
@@ -1054,6 +1056,10 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           const providerFiltering = isObjectRecord(providerOptions?.modelFiltering)
             ? providerOptions.modelFiltering
             : undefined;
+          const timeoutMs = toStrictlyPositiveNumber(providerEnrichment?.timeoutMs);
+          const cacheTtlMs = toStrictlyPositiveNumber(providerEnrichment?.cacheTtlMs);
+          const defaultContextWindow = toStrictlyPositiveNumber(providerEnrichment?.defaultContextWindow);
+          const defaultMaxOutputTokens = toStrictlyPositiveNumber(providerEnrichment?.defaultMaxOutputTokens);
 
           const runtimeEnrichmentOpts = {
             ...configuredEnrichmentOpts,
@@ -1061,20 +1067,20 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             ...(typeof providerEnrichment?.catalogURL === "string" && providerEnrichment.catalogURL.trim()
               ? { catalogURL: providerEnrichment.catalogURL }
               : {}),
-            ...(toStrictlyPositiveNumber(providerEnrichment?.timeoutMs) !== undefined
-              ? { timeoutMs: toStrictlyPositiveNumber(providerEnrichment?.timeoutMs) }
+            ...(timeoutMs !== undefined
+              ? { timeoutMs }
               : {}),
-            ...(toStrictlyPositiveNumber(providerEnrichment?.cacheTtlMs) !== undefined
-              ? { cacheTtlMs: toStrictlyPositiveNumber(providerEnrichment?.cacheTtlMs) }
+            ...(cacheTtlMs !== undefined
+              ? { cacheTtlMs }
               : {}),
             ...(typeof providerEnrichment?.overrideUpstream === "boolean"
               ? { overrideUpstream: providerEnrichment.overrideUpstream }
               : {}),
-            ...(toStrictlyPositiveNumber(providerEnrichment?.defaultContextWindow) !== undefined
-              ? { defaultContextWindow: toStrictlyPositiveNumber(providerEnrichment?.defaultContextWindow) }
+            ...(defaultContextWindow !== undefined
+              ? { defaultContextWindow }
               : {}),
-            ...(toStrictlyPositiveNumber(providerEnrichment?.defaultMaxOutputTokens) !== undefined
-              ? { defaultMaxOutputTokens: toStrictlyPositiveNumber(providerEnrichment?.defaultMaxOutputTokens) }
+            ...(defaultMaxOutputTokens !== undefined
+              ? { defaultMaxOutputTokens }
               : {})
           };
           const runtimeProviderAliases = {
