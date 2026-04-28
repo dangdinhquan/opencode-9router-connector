@@ -173,6 +173,7 @@ const customPlugin = createOpenAICompatibleModelsPlugin({
   modelsDevCacheTtlMs: 600000,
   modelsDevOverrideUpstream: false,
   modelsDevProviderAliases: { gh: "github", cx: "openai" },
+  includePrefixes: ["gh", "cx", "cc"],
   includeModelIdRegex: /^gpt|^o\d/i,
   excludeModelIdRegex: /audio|embedding/i
 });

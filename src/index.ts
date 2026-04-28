@@ -15,6 +15,9 @@ export interface RouterPluginOptions {
   modelsDevProviderAliases?: Record<string, string>;
   includeModelIdRegex?: RegExp;
   excludeModelIdRegex?: RegExp;
+  /** Only include models whose prefix (the part before the first `/`) is in this list.
+   * Comparison is case-insensitive. When omitted or empty, all prefixes are allowed. */
+  includePrefixes?: string[];
 }
 
 /** Model format expected by opencode (ModelV2). */
@@ -190,7 +193,7 @@ type ModelsDevIndex = {
 };
 
 const DEFAULT_OPTIONS: Required<
-  Omit<RouterPluginOptions, "includeModelIdRegex" | "excludeModelIdRegex" | "modelsDevProviderAliases">
+  Omit<RouterPluginOptions, "includeModelIdRegex" | "excludeModelIdRegex" | "modelsDevProviderAliases" | "includePrefixes">
 > = {
   providerId: "9router",
   defaultBaseURL: "https://api.your_9router.com/v1",
@@ -547,6 +550,13 @@ function regexPass(regex: RegExp | undefined, value: string): boolean {
 
   regex.lastIndex = 0;
   return regex.test(value);
+}
+
+function prefixPass(includePrefixes: string[] | undefined, modelId: string, pluginProviderId: string): boolean {
+  if (!includePrefixes || includePrefixes.length === 0) return true;
+  const { providerKey } = splitModelForLookup(modelId, pluginProviderId);
+  const normalized = (providerKey ?? "").toLowerCase();
+  return includePrefixes.some((p) => p.toLowerCase() === normalized);
 }
 
 function normalizeBaseURLInput(value: string): string {
@@ -967,6 +977,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
     ...DEFAULT_OPTIONS,
     ...options
   };
+  const includePrefixes = options.includePrefixes;
   const providerAliases = {
     ...DEFAULT_MODELS_DEV_PROVIDER_ALIASES,
     ...(options.modelsDevProviderAliases ?? {})
@@ -1023,6 +1034,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           const dynamicModels = upstreamModels
             .filter((model) => regexPass(includeModelIdRegex, model.id))
             .filter((model) => !excludeModelIdRegex || !regexPass(excludeModelIdRegex, model.id))
+            .filter((model) => prefixPass(includePrefixes, model.id, providerId))
             .reduce<Record<string, OpenCodeModel>>((acc, model) => {
               const enriched = findEnrichedModel(model.id, providerId, modelsDevIndex, providerAliases);
               acc[model.id] = toOpenCodeModel(
