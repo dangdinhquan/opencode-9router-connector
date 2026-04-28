@@ -168,11 +168,14 @@ const customPlugin = createOpenAICompatibleModelsPlugin({
   apiKeyEnvName: "ROUTER9_API_KEY",
   defaultContextWindow: 128000,
   defaultMaxOutputTokens: 8192,
-  modelsDevCatalogURL: "https://models.dev/api.json",
-  modelsDevTimeoutMs: 3000,
-  modelsDevCacheTtlMs: 600000,
-  modelsDevOverrideUpstream: false,
-  modelsDevProviderAliases: { gh: "github", cx: "openai" },
+  modelEnrichment: {
+    enabled: true,
+    catalogURL: "https://models.dev/api.json",
+    timeoutMs: 3000,
+    cacheTtlMs: 600000,
+    overrideUpstream: false,
+    providerAliases: { gh: "github", cx: "openai" }
+  },
   includePrefixes: ["gh", "cx", "cc"],
   includeModelIdRegex: /^gpt|^o\d/i,
   excludeModelIdRegex: /audio|embedding/i
@@ -208,9 +211,11 @@ Lookup flow (in order):
 3. global exact match (only when unambiguous)
 4. global normalized match (only when unambiguous)
 
-Provider prefix mapping is configurable via `modelsDevProviderAliases` (for example `gh -> github`, `cx -> openai`).
+Provider prefix mapping is configurable via `modelEnrichment.providerAliases` (for example `gh -> github`, `cx -> openai`).
 
-When upstream `/v1/models` already provides fields such as `context_length`, `capabilities`, or `max_output_tokens`, they are used by default. Set `modelsDevOverrideUpstream: true` to force models.dev values to override upstream metadata.
+When upstream `/v1/models` already provides fields such as `context_length`, `capabilities`, or `max_output_tokens`, they are used by default. Set `modelEnrichment.overrideUpstream: true` to force models.dev values to override upstream metadata.
+
+Set `modelEnrichment.enabled: false` to disable the entire enrichment sub-system (no catalog fetch will be performed).
 
 If no models.dev match is found, safe defaults are used:
 

@@ -2,17 +2,30 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+/** Options for the models.dev enrichment sub-system. */
+export interface ModelEnrichmentOptions {
+  /** Set to `false` to disable models.dev enrichment entirely. Defaults to `true`. */
+  enabled?: boolean;
+  /** URL of the models.dev catalog JSON. Defaults to `"https://models.dev/api.json"`. */
+  catalogURL?: string;
+  /** HTTP timeout in ms for fetching the catalog. Defaults to `3000`. */
+  timeoutMs?: number;
+  /** How long (in ms) to cache the catalog in memory. Defaults to `10 * 60 * 1000`. */
+  cacheTtlMs?: number;
+  /** When `true`, models.dev values override upstream metadata. Defaults to `false`. */
+  overrideUpstream?: boolean;
+  /** Maps gateway provider prefixes to models.dev provider keys (e.g. `{ gh: "github" }`). */
+  providerAliases?: Record<string, string>;
+}
+
 export interface RouterPluginOptions {
   providerId?: string;
   defaultBaseURL?: string;
   apiKeyEnvName?: string;
   defaultContextWindow?: number;
   defaultMaxOutputTokens?: number;
-  modelsDevCatalogURL?: string;
-  modelsDevTimeoutMs?: number;
-  modelsDevCacheTtlMs?: number;
-  modelsDevOverrideUpstream?: boolean;
-  modelsDevProviderAliases?: Record<string, string>;
+  /** models.dev enrichment configuration. */
+  modelEnrichment?: ModelEnrichmentOptions;
   includeModelIdRegex?: RegExp;
   excludeModelIdRegex?: RegExp;
   /** Only include models whose prefix (the part before the first `/`) is in this list.
@@ -192,18 +205,22 @@ type ModelsDevIndex = {
   normalizedGlobal: Map<string, ModelsDevModel[]>;
 };
 
+const DEFAULT_MODEL_ENRICHMENT: Required<Omit<ModelEnrichmentOptions, "providerAliases">> = {
+  enabled: true,
+  catalogURL: "https://models.dev/api.json",
+  timeoutMs: 3000,
+  cacheTtlMs: 10 * 60 * 1000,
+  overrideUpstream: false
+};
+
 const DEFAULT_OPTIONS: Required<
-  Omit<RouterPluginOptions, "includeModelIdRegex" | "excludeModelIdRegex" | "modelsDevProviderAliases" | "includePrefixes">
+  Omit<RouterPluginOptions, "includeModelIdRegex" | "excludeModelIdRegex" | "modelEnrichment" | "includePrefixes">
 > = {
   providerId: "9router",
   defaultBaseURL: "https://api.your_9router.com/v1",
   apiKeyEnvName: "ROUTER9_API_KEY",
   defaultContextWindow: 128000,
-  defaultMaxOutputTokens: 8192,
-  modelsDevCatalogURL: "https://models.dev/api.json",
-  modelsDevTimeoutMs: 3000,
-  modelsDevCacheTtlMs: 10 * 60 * 1000,
-  modelsDevOverrideUpstream: false
+  defaultMaxOutputTokens: 8192
 };
 
 type PluginSettings = {
@@ -967,10 +984,6 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
     apiKeyEnvName,
     defaultContextWindow,
     defaultMaxOutputTokens,
-    modelsDevCatalogURL,
-    modelsDevTimeoutMs,
-    modelsDevCacheTtlMs,
-    modelsDevOverrideUpstream,
     includeModelIdRegex,
     excludeModelIdRegex
   } = {
@@ -978,9 +991,11 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
     ...options
   };
   const includePrefixes = options.includePrefixes;
+  const enrichmentOpts = { ...DEFAULT_MODEL_ENRICHMENT, ...(options.modelEnrichment ?? {}) };
+  const enrichmentEnabled = enrichmentOpts.enabled !== false;
   const providerAliases = {
     ...DEFAULT_MODELS_DEV_PROVIDER_ALIASES,
-    ...(options.modelsDevProviderAliases ?? {})
+    ...(options.modelEnrichment?.providerAliases ?? {})
   };
 
   return async (_input: PluginInput): Promise<Hooks> => {
@@ -1012,11 +1027,9 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           }
 
           const baseURL = pickBaseURL(provider, defaultBaseURL, settings.baseURL);
-          const modelsDevCatalog = await fetchModelsDevCatalog(
-            modelsDevCatalogURL,
-            modelsDevTimeoutMs,
-            modelsDevCacheTtlMs
-          );
+          const modelsDevCatalog = enrichmentEnabled
+            ? await fetchModelsDevCatalog(enrichmentOpts.catalogURL, enrichmentOpts.timeoutMs, enrichmentOpts.cacheTtlMs)
+            : undefined;
           const modelsDevIndex = modelsDevCatalog ? buildModelsDevIndex(modelsDevCatalog) : undefined;
 
           const upstreamModels = await fetchModels(baseURL, apiKey);
@@ -1045,7 +1058,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
                 defaultMaxOutputTokens,
                 enriched,
                 apiKey,
-                modelsDevOverrideUpstream
+                enrichmentOpts.overrideUpstream
               );
               return acc;
             }, {});
