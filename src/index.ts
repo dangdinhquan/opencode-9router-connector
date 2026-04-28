@@ -471,10 +471,7 @@ function toOpenCodeModel(
   const family =
     (typeof enriched?.family === "string" && enriched.family.trim() ? enriched.family : undefined) ||
     inferFamily(modelKey);
-  const displayName =
-    typeof enriched?.name === "string" && enriched.name.trim()
-      ? enriched.name
-      : (upstream.name?.trim() || modelKey);
+  const displayName = upstream.id;
   const releaseDate =
     typeof enriched?.release_date === "string" && enriched.release_date.trim()
       ? enriched.release_date
