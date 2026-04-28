@@ -122,29 +122,32 @@ Required by default:
 
 You can change the env var name with `apiKeyEnvName` in plugin options.
 
-## OpenCode provider config example
+## OpenCode config sample (`~/.config/opencode/opencode.json`)
 
 > The provider key must match the plugin `providerId` (default: `9router`).
 
-```ts
-providers: {
-  "9router": {
-    // Either field can be used; plugin resolves api first, then baseURL.
-    // Defaults to https://llm-gateway.denda.cloud/v1 if not specified.
-    api: "https://llm-gateway.denda.cloud/v1",
-    // baseURL: "https://llm-gateway.denda.cloud/v1",
-    models: {
-      // Static fallback models. Dynamic discovery overrides by model id.
-      "gpt-4o-mini": {
-        id: "gpt-4o-mini",
-        name: "gpt-4o-mini",
-        family: "gpt-4o",
-        release_date: "2024-07-18",
-        attachment: false,
-        reasoning: false,
-        temperature: true,
-        tool_call: true,
-        limit: { context: 128000, output: 8192 }
+```jsonc
+{
+  "plugin": ["@dendaio/opencode-9router-plugin"],
+  "provider": {
+    "9router": {
+      // Either field can be used; plugin resolves api first, then baseURL.
+      // Defaults to https://llm-gateway.denda.cloud/v1 if not specified.
+      "api": "https://llm-gateway.denda.cloud/v1",
+      // "baseURL": "https://llm-gateway.denda.cloud/v1",
+      "models": {
+        // Static fallback models. Dynamic discovery overrides by model id.
+        "gpt-4o-mini": {
+          "id": "gpt-4o-mini",
+          "name": "gpt-4o-mini",
+          "family": "gpt-4o",
+          "release_date": "2024-07-18",
+          "attachment": false,
+          "reasoning": false,
+          "temperature": true,
+          "tool_call": true,
+          "limit": { "context": 128000, "output": 8192 }
+        }
       }
     }
   }
