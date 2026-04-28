@@ -324,6 +324,13 @@ function pickBooleanWithOverride(
   return upstream ?? enriched ?? fallback;
 }
 
+/**
+ * Normalize model IDs for fuzzy matching:
+ * - strips date suffixes (`-2024-11-20`)
+ * - strips trailing version tags (`-v1`, `-4.5`)
+ * - strips release labels (`-preview`, `-latest`, `-stable`)
+ * - normalizes `_` to `-`
+ */
 function normalizeModelKey(modelId: string): string {
   return modelId
     .toLowerCase()
@@ -346,15 +353,15 @@ function splitModelForLookup(
   ]);
 
   const slashParts = trimmed.split("/").filter((part) => part.trim() !== "");
-  if (slashParts.length >= 3 && gatewayPrefixes.has(slashParts[0]?.toLowerCase() ?? "")) {
+  if (slashParts.length >= 3 && gatewayPrefixes.has(slashParts[0].toLowerCase())) {
     return {
-      providerKey: slashParts[1] ?? null,
+      providerKey: slashParts[1],
       modelKey: slashParts.slice(2).join("/")
     };
   }
   if (slashParts.length >= 2) {
     return {
-      providerKey: slashParts[0] ?? null,
+      providerKey: slashParts[0],
       modelKey: slashParts.slice(1).join("/")
     };
   }
@@ -915,6 +922,10 @@ function buildModelsDevIndex(catalog: ModelsDevCatalog): ModelsDevIndex {
   };
 }
 
+function singleOrUndefined<T>(values: T[] | undefined): T | undefined {
+  return values?.length === 1 ? values[0] : undefined;
+}
+
 function findEnrichedModel(
   modelId: string,
   providerId: string,
@@ -933,12 +944,8 @@ function findEnrichedModel(
     ? index.normalizedByProvider.get(alias)?.get(normalizedKey)
     : undefined;
 
-  const globalExactCandidates = index.exactGlobal.get(exactKey);
-  const globalExact = globalExactCandidates?.length === 1 ? globalExactCandidates[0] : undefined;
-
-  const globalNormalizedCandidates = index.normalizedGlobal.get(normalizedKey);
-  const globalNormalized =
-    globalNormalizedCandidates?.length === 1 ? globalNormalizedCandidates[0] : undefined;
+  const globalExact = singleOrUndefined(index.exactGlobal.get(exactKey));
+  const globalNormalized = singleOrUndefined(index.normalizedGlobal.get(normalizedKey));
 
   return providerExact ?? providerNormalized ?? globalExact ?? globalNormalized;
 }
