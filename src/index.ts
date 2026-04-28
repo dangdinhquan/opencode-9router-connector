@@ -26,7 +26,9 @@ export interface ModelFilteringOptions {
   /** Only include models whose prefix (the part before the first `/`) is in this list.
    * Comparison is case-insensitive. When omitted or empty, all prefixes are allowed. */
   includePrefixes?: string[];
+  /** Allow-list upstream models by ID. Models must match this regex to be included. */
   includeModelIdRegex?: RegExp;
+  /** Block-list upstream models by ID. Applied after include filters. */
   excludeModelIdRegex?: RegExp;
 }
 
@@ -232,17 +234,10 @@ const DEFAULT_MODEL_ENRICHMENT: Required<Omit<ModelEnrichmentOptions, "providerA
   defaultMaxOutputTokens: 8192
 };
 
-const DEFAULT_OPTIONS: Required<
-  Omit<
-    RouterPluginOptions,
-    "includeModelIdRegex" | "excludeModelIdRegex" | "modelEnrichment" | "includePrefixes" | "modelFiltering"
-  >
-> = {
+const DEFAULT_OPTIONS = {
   providerId: "9router",
   defaultBaseURL: "https://api.your_9router.com/v1",
-  apiKeyEnvName: "ROUTER9_API_KEY",
-  defaultContextWindow: 128000,
-  defaultMaxOutputTokens: 8192
+  apiKeyEnvName: "ROUTER9_API_KEY"
 };
 
 type PluginSettings = {
@@ -594,7 +589,8 @@ function regexPass(regex: RegExp | undefined, value: string): boolean {
 function prefixPass(includePrefixes: string[] | undefined, modelId: string, pluginProviderId: string): boolean {
   if (!includePrefixes || includePrefixes.length === 0) return true;
   const { providerKey } = splitModelForLookup(modelId, pluginProviderId);
-  const normalized = (providerKey ?? "").toLowerCase();
+  if (!providerKey) return false;
+  const normalized = providerKey.toLowerCase();
   return includePrefixes.some((p) => p.toLowerCase() === normalized);
 }
 
@@ -641,7 +637,7 @@ function openCodeConfigDir(): string {
     if (appData) return path.join(appData, "opencode");
     return path.join(home, "AppData", "Roaming", "opencode");
   }
-  // Linux and everything else: honour XDG_CONFIG_HOME
+  // Linux and everything else: honor XDG_CONFIG_HOME
   const xdg = process.env.XDG_CONFIG_HOME;
   const configBase = xdg && path.isAbsolute(xdg) ? xdg : path.join(home, ".config");
   return path.join(configBase, "opencode");
@@ -652,7 +648,7 @@ function settingsFilePath(providerId: string): string {
 }
 
 function openCodeConfigPath(): string {
-  // Honour the same env var that opencode itself uses to override the config
+  // Honor the same env var that opencode itself uses to override the config
   // file location (e.g. OPENCODE_CONFIG=/path/to/custom.json opencode …).
   const envOverride = process.env.OPENCODE_CONFIG;
   if (envOverride && path.isAbsolute(envOverride)) return envOverride;
@@ -1123,10 +1119,12 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
               const baseURLError = validateBaseURL(baseURLInput);
               if (baseURLError) {
                 process.stderr.write(
-                  `[opencode-9router-plugin] authorize: invalid baseURL provided, using default (${defaultBaseURL})\n`
+                  `[opencode-9router-plugin] authorize: invalid baseURL provided (${baseURLError}), using default (${defaultBaseURL})\n`
                 );
               }
-              const normalizedBaseURL = baseURLError ? defaultBaseURL : normalizeBaseURLInput(baseURLInput);
+              const normalizedBaseURL = baseURLError
+                ? normalizeBaseURLInput(defaultBaseURL)
+                : normalizeBaseURLInput(baseURLInput);
               const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
               // Persist settings so subsequent runs can reuse them.
               await writeSettings(providerId, { baseURL: normalizedBaseURL, ...(apiKey ? { apiKey } : {}) }).catch((err) => {
