@@ -1200,7 +1200,9 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
               // on next startup (before provider.models is called).
               const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
               if (apiKey) {
-                await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput), apiKey }).catch(() => undefined);
+                await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput), apiKey }).catch((err) => {
+                  process.stderr.write(`[opencode-9router-plugin] authorize: failed to persist settings: ${String(err)}\n`);
+                });
               }
               return apiKey !== undefined ? { type: "success", key: apiKey } : { type: "success" };
             }
