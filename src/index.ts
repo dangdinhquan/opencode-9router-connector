@@ -507,6 +507,10 @@ function settingsFilePath(providerId: string): string {
 }
 
 function openCodeConfigPath(): string {
+  // Honour the same env var that opencode itself uses to override the config
+  // file location (e.g. OPENCODE_CONFIG=/path/to/custom.json opencode …).
+  const envOverride = process.env.OPENCODE_CONFIG;
+  if (envOverride && path.isAbsolute(envOverride)) return envOverride;
   return path.join(openCodeConfigDir(), "opencode.json");
 }
 
