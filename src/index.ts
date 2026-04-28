@@ -523,8 +523,14 @@ function openCodeConfigPath(): string {
  * (note: the key is singular "provider", not "providers").
  * Without this entry the models hook is silently skipped regardless of whether
  * the user has valid credentials.
+ *
+ * Storing `api` and `key` in the provider entry also lets opencode's /connect
+ * screen show the provider as properly configured.
  */
-async function ensureProviderInOpenCodeConfig(providerId: string): Promise<void> {
+async function ensureProviderInOpenCodeConfig(
+  providerId: string,
+  patch: { api?: string; key?: string } = {}
+): Promise<void> {
   const file = openCodeConfigPath();
   let config: Record<string, unknown> = {};
   try {
@@ -543,12 +549,23 @@ async function ensureProviderInOpenCodeConfig(providerId: string): Promise<void>
       ? (providerSection as Record<string, unknown>)
       : {};
 
-  if (typeof providerObj[providerId] !== "undefined") {
-    // already registered — nothing to do
+  const existing: Record<string, unknown> =
+    isObjectRecord(providerObj[providerId]) ? (providerObj[providerId] as Record<string, unknown>) : {};
+
+  const updated: Record<string, unknown> = { ...existing };
+  if (patch.api) updated.api = patch.api;
+  if (patch.key) updated.key = patch.key;
+
+  // Skip the write if nothing has changed.
+  if (
+    typeof providerObj[providerId] !== "undefined" &&
+    updated.api === existing.api &&
+    updated.key === existing.key
+  ) {
     return;
   }
 
-  providerObj[providerId] = {};
+  providerObj[providerId] = updated;
   config.provider = providerObj;
 
   await mkdir(path.dirname(file), { recursive: true });
@@ -1201,36 +1218,22 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
                 message: "Enter your 9Router base URL",
                 placeholder: defaultBaseURL,
                 validate: validateBaseURL
-              },
-              {
-                type: "text",
-                key: "key",
-                message: "Enter your 9Router API key",
-                placeholder: "sk-...",
-                validate: (value: string) => {
-                  if (!value.trim()) return "API key is required";
-                  return undefined;
-                }
               }
             ],
             authorize: async (inputs = {}) => {
               const baseURLInput = typeof inputs.baseURL === "string" ? inputs.baseURL : defaultBaseURL;
-              const error = validateBaseURL(baseURLInput);
-              if (!error) {
-                await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput) });
-              }
+              const baseURLError = validateBaseURL(baseURLInput);
+              const normalizedBaseURL = baseURLError ? defaultBaseURL : normalizeBaseURLInput(baseURLInput);
+              const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
+              // Persist settings so the config hook can use them on the next startup.
+              await writeSettings(providerId, { baseURL: normalizedBaseURL, ...(apiKey ? { apiKey } : {}) }).catch((err) => {
+                process.stderr.write(`[opencode-9router-plugin] authorize: failed to persist settings: ${String(err)}\n`);
+              });
               // Ensure opencode.json has this provider listed so opencode will
               // call the provider.models hook. Without this entry opencode never
-              // invokes the hook and no models are discovered.
-              await ensureProviderInOpenCodeConfig(providerId);
-              // Persist the API key to settings so the config hook can use it
-              // on next startup (before provider.models is called).
-              const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
-              if (apiKey) {
-                await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput), apiKey }).catch((err) => {
-                  process.stderr.write(`[opencode-9router-plugin] authorize: failed to persist settings: ${String(err)}\n`);
-                });
-              }
+              // invokes the hook and no models are discovered.  Storing api+key
+              // lets the /connect screen show the provider as fully configured.
+              await ensureProviderInOpenCodeConfig(providerId, { api: normalizedBaseURL, ...(apiKey ? { key: apiKey } : {}) });
               return apiKey !== undefined ? { type: "success", key: apiKey } : { type: "success" };
             }
           }
