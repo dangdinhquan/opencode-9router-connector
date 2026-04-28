@@ -284,7 +284,7 @@ function inferFamily(modelId: string): string {
   return fallback || "unknown";
 }
 
-function toPositiveNumber(value: unknown): number | undefined {
+function toStrictlyPositiveNumber(value: unknown): number | undefined {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     return undefined;
   }
@@ -408,10 +408,10 @@ function toOpenCodeModel(
     typeof enriched?.release_date === "string" && enriched.release_date.trim()
       ? enriched.release_date
       : toDate(upstream.created);
-  const upstreamContext = toPositiveNumber(upstream.context_length);
-  const upstreamOutput = toPositiveNumber(upstream.max_output_tokens);
-  const enrichedContext = toPositiveNumber(enriched?.limit?.context);
-  const enrichedOutput = toPositiveNumber(enriched?.limit?.output);
+  const upstreamContext = toStrictlyPositiveNumber(upstream.context_length);
+  const upstreamOutput = toStrictlyPositiveNumber(upstream.max_output_tokens);
+  const enrichedContext = toStrictlyPositiveNumber(enriched?.limit?.context);
+  const enrichedOutput = toStrictlyPositiveNumber(enriched?.limit?.output);
 
   const context = pickNumberWithOverride(
     upstreamContext,
@@ -1074,6 +1074,11 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             authorize: async (inputs = {}) => {
               const baseURLInput = typeof inputs.baseURL === "string" ? inputs.baseURL : defaultBaseURL;
               const baseURLError = validateBaseURL(baseURLInput);
+              if (baseURLError) {
+                process.stderr.write(
+                  `[opencode-9router-plugin] authorize: invalid baseURL provided, using default (${defaultBaseURL})\n`
+                );
+              }
               const normalizedBaseURL = baseURLError ? defaultBaseURL : normalizeBaseURLInput(baseURLInput);
               const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
               // Persist settings so subsequent runs can reuse them.
