@@ -2,7 +2,7 @@
 
 A production-ready OpenCode plugin that auto-connects to any OpenAI-compatible API and auto-discovers available models from `GET /v1/models`.
 
-The plugin maps discovered models into OpenCode `provider.models` format, auto-names them as `Provider - Model`, enriches capability/token metadata from `https://models.dev/api.json`, supports include/exclude filtering by model ID, and safely falls back to static models when discovery cannot run.
+The plugin maps discovered models into OpenCode `provider.models` format, preserves native model IDs from `/v1/models` (for example `gh/gpt-5.3-codex`), enriches capability/token metadata from `https://models.dev/api.json`, supports include/exclude filtering by model ID, and safely falls back to static models when discovery cannot run.
 
 ## Installation
 
@@ -171,6 +171,8 @@ const customPlugin = createOpenAICompatibleModelsPlugin({
   modelsDevCatalogURL: "https://models.dev/api.json",
   modelsDevTimeoutMs: 3000,
   modelsDevCacheTtlMs: 600000,
+  modelsDevOverrideUpstream: false,
+  modelsDevProviderAliases: { gh: "github", cx: "openai" },
   includeModelIdRegex: /^gpt|^o\d/i,
   excludeModelIdRegex: /audio|embedding/i
 });
@@ -196,13 +198,18 @@ At runtime, base URL resolution order is:
 
 ## models.dev enrichment
 
-`GET /v1/models` usually does not include capability and limit details. This plugin enriches discovered models using `https://models.dev/api.json`.
+`GET /v1/models` often omits capability and limit details. This plugin enriches discovered models using `https://models.dev/api.json`, with indexed lookup and provider alias mapping.
 
-Matching supports common variants for OpenCode compatibility:
+Lookup flow (in order):
 
-- `provider/model` (ex: `openai/gpt-4o-mini`)
-- `provider:model` (ex: `openai:gpt-4o-mini`)
-- bare model id (ex: `gpt-4o-mini`)
+1. provider-specific exact match
+2. provider-specific normalized match (`normalizeModelKey`)
+3. global exact match (only when unambiguous)
+4. global normalized match (only when unambiguous)
+
+Provider prefix mapping is configurable via `modelsDevProviderAliases` (for example `gh -> github`, `cx -> openai`).
+
+When upstream `/v1/models` already provides fields such as `context_length`, `capabilities`, or `max_output_tokens`, they are used by default. Set `modelsDevOverrideUpstream: true` to force models.dev values to override upstream metadata.
 
 If no models.dev match is found, safe defaults are used:
 
