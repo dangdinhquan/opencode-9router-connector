@@ -1136,18 +1136,15 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           const dynamicModels = upstreamModels
             .filter((model) => {
               const { modelKey } = splitModelForLookup(model.id, providerId);
-              return regexPass(runtimeFilteringOpts.includeModelIdRegex, model.id)
+              const includePass = regexPass(runtimeFilteringOpts.includeModelIdRegex, model.id)
                 || regexPass(runtimeFilteringOpts.includeModelIdRegex, modelKey);
+              const excludePass = !runtimeFilteringOpts.excludeModelIdRegex
+                || (!regexPass(runtimeFilteringOpts.excludeModelIdRegex, model.id)
+                  && !regexPass(runtimeFilteringOpts.excludeModelIdRegex, modelKey));
+              return includePass
+                && excludePass
+                && prefixPass(runtimeFilteringOpts.includePrefixes, model.id, providerId);
             })
-            .filter((model) => {
-              if (!runtimeFilteringOpts.excludeModelIdRegex) {
-                return true;
-              }
-              const { modelKey } = splitModelForLookup(model.id, providerId);
-              return !regexPass(runtimeFilteringOpts.excludeModelIdRegex, model.id)
-                && !regexPass(runtimeFilteringOpts.excludeModelIdRegex, modelKey);
-            })
-            .filter((model) => prefixPass(runtimeFilteringOpts.includePrefixes, model.id, providerId))
             .reduce<Record<string, OpenCodeModel>>((acc, model) => {
               const enriched = findEnrichedModel(model.id, providerId, modelsDevIndex, runtimeProviderAliases);
               acc[model.id] = toOpenCodeModel(
