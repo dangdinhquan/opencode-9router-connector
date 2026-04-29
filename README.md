@@ -151,6 +151,7 @@ You can change the env var name with `apiKeyEnvName` in plugin options.
         },
         "modelFiltering": {
           "includePrefixes": ["gh", "cx", "cc"],
+          "excludePrefixes": ["ag"],
           // Regex matches either full id (`gh/gpt-5.2`) or model key (`gpt-5.2`);
           // can be plain pattern ("^(gpt|o\\d)") or slash form ("/^(gpt|o\\d)/i")
           "includeModelIdRegex": "/^(gpt|o\\d)/i",
@@ -203,6 +204,7 @@ const customPlugin = createOpenAICompatibleModelsPlugin({
   },
   modelFiltering: {
     includePrefixes: ["gh", "cx", "cc"],
+    excludePrefixes: ["ag"],
     includeModelIdRegex: /^(gpt|o\d)/i,
     excludeModelIdRegex: /audio|embedding/i
   }
@@ -257,8 +259,44 @@ If no models.dev match is found, safe defaults are used:
 Use `modelFiltering` to control which upstream models are imported:
 
 - `includePrefixes`: keep only model IDs with allowed provider prefixes (e.g. `gh/*`, `cx/*`).
+- `excludePrefixes`: remove model IDs with blocked provider prefixes (e.g. `ag/*`).
 - `includeModelIdRegex`: allow-list by model ID regex.
 - `excludeModelIdRegex`: block-list by model ID regex (applied after include filters).
+
+### Filtering examples
+
+Exclude `-high`, `-low`, `-none`, `-xhigh` variants:
+
+```jsonc
+{
+  "provider": {
+    "9router": {
+      "options": {
+        "modelFiltering": {
+          "excludeModelIdRegex": "(-high|-low|-none|-xhigh)$"
+        }
+      }
+    }
+  }
+}
+```
+
+Allow only `gh/*` and `cx/*`, but explicitly remove `ag/*`:
+
+```jsonc
+{
+  "provider": {
+    "9router": {
+      "options": {
+        "modelFiltering": {
+          "includePrefixes": ["gh", "cx", "ag"],
+          "excludePrefixes": ["ag"]
+        }
+      }
+    }
+  }
+}
+```
 
 ## Troubleshooting
 

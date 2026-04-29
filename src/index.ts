@@ -26,6 +26,9 @@ export interface ModelFilteringOptions {
   /** Only include models whose prefix (the part before the first `/`) is in this list.
    * Comparison is case-insensitive. When omitted or empty, all prefixes are allowed. */
   includePrefixes?: string[];
+  /** Exclude models whose prefix (the part before the first `/`) is in this list.
+   * Comparison is case-insensitive. Applied after include prefix filtering. */
+  excludePrefixes?: string[];
   /** Allow-list upstream models by ID. Models must match this regex to be included. */
   includeModelIdRegex?: RegExp;
   /** Block-list upstream models by ID. Applied after include filters. */
@@ -625,6 +628,14 @@ function prefixPass(includePrefixes: string[] | undefined, modelId: string, plug
   return includePrefixes.some((p) => p.toLowerCase() === normalized);
 }
 
+function prefixExcludePass(excludePrefixes: string[] | undefined, modelId: string, pluginProviderId: string): boolean {
+  if (!excludePrefixes || excludePrefixes.length === 0) return true;
+  const { providerKey } = splitModelForLookup(modelId, pluginProviderId);
+  if (!providerKey) return true;
+  const normalized = providerKey.toLowerCase();
+  return !excludePrefixes.some((p) => p.toLowerCase() === normalized);
+}
+
 function normalizeBaseURLInput(value: string): string {
   let out = value.trim();
   while (out.endsWith("/")) {
@@ -1086,6 +1097,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           };
           const runtimeFilteringOpts = {
             includePrefixes: toStringArray(providerFiltering?.includePrefixes) ?? configuredFilteringOpts.includePrefixes,
+            excludePrefixes: toStringArray(providerFiltering?.excludePrefixes) ?? configuredFilteringOpts.excludePrefixes,
             includeModelIdRegex: toRegex(providerFiltering?.includeModelIdRegex) ?? configuredFilteringOpts.includeModelIdRegex,
             excludeModelIdRegex: toRegex(providerFiltering?.excludeModelIdRegex) ?? configuredFilteringOpts.excludeModelIdRegex
           };
@@ -1143,7 +1155,8 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
                   && !regexPass(runtimeFilteringOpts.excludeModelIdRegex, modelKey));
               return includePass
                 && excludePass
-                && prefixPass(runtimeFilteringOpts.includePrefixes, model.id, providerId);
+                && prefixPass(runtimeFilteringOpts.includePrefixes, model.id, providerId)
+                && prefixExcludePass(runtimeFilteringOpts.excludePrefixes, model.id, providerId);
             })
             .reduce<Record<string, OpenCodeModel>>((acc, model) => {
               const enriched = findEnrichedModel(model.id, providerId, modelsDevIndex, runtimeProviderAliases);
