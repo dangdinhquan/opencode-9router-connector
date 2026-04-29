@@ -625,7 +625,7 @@ function prefixPass(includePrefixes: string[] | undefined, modelId: string, plug
   const { providerKey } = splitModelForLookup(modelId, pluginProviderId);
   if (!providerKey) return false;
   const normalized = providerKey.toLowerCase();
-  return includePrefixes.some((p) => p.toLowerCase() === normalized);
+  return includePrefixes.includes(normalized);
 }
 
 function prefixExcludePass(excludePrefixes: string[] | undefined, modelId: string, pluginProviderId: string): boolean {
@@ -633,7 +633,7 @@ function prefixExcludePass(excludePrefixes: string[] | undefined, modelId: strin
   const { providerKey } = splitModelForLookup(modelId, pluginProviderId);
   if (!providerKey) return true;
   const normalized = providerKey.toLowerCase();
-  return !excludePrefixes.some((p) => p.toLowerCase() === normalized);
+  return !excludePrefixes.includes(normalized);
 }
 
 function normalizeBaseURLInput(value: string): string {
@@ -1101,6 +1101,8 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             includeModelIdRegex: toRegex(providerFiltering?.includeModelIdRegex) ?? configuredFilteringOpts.includeModelIdRegex,
             excludeModelIdRegex: toRegex(providerFiltering?.excludeModelIdRegex) ?? configuredFilteringOpts.excludeModelIdRegex
           };
+          const normalizedIncludePrefixes = runtimeFilteringOpts.includePrefixes?.map((p) => p.toLowerCase());
+          const normalizedExcludePrefixes = runtimeFilteringOpts.excludePrefixes?.map((p) => p.toLowerCase());
           const enrichmentEnabled = runtimeEnrichmentOpts.enabled !== false;
 
           const staticModels = provider.models ?? {};
@@ -1155,8 +1157,8 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
                   && !regexPass(runtimeFilteringOpts.excludeModelIdRegex, modelKey));
               return includePass
                 && excludePass
-                && prefixPass(runtimeFilteringOpts.includePrefixes, model.id, providerId)
-                && prefixExcludePass(runtimeFilteringOpts.excludePrefixes, model.id, providerId);
+                && prefixPass(normalizedIncludePrefixes, model.id, providerId)
+                && prefixExcludePass(normalizedExcludePrefixes, model.id, providerId);
             })
             .reduce<Record<string, OpenCodeModel>>((acc, model) => {
               const enriched = findEnrichedModel(model.id, providerId, modelsDevIndex, runtimeProviderAliases);
