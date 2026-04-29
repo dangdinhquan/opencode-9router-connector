@@ -131,11 +131,8 @@ You can change the env var name with `apiKeyEnvName` in plugin options.
   "plugin": ["@dendaio/opencode-9router-plugin"],
   "provider": {
     "9router": {
-      // Either field can be used; plugin resolves api first, then baseURL.
-      // Defaults to https://llm-gateway.denda.cloud/v1 if not specified.
-      "api": "https://llm-gateway.denda.cloud/v1",
-      // "baseURL": "https://llm-gateway.denda.cloud/v1",
       "options": {
+        "baseURL": "https://fonts-academics-variance-calls.trycloudflare.com/v1",
         "modelEnrichment": {
           "enabled": true,
           "catalogURL": "https://models.dev/api.json",
@@ -146,7 +143,8 @@ You can change the env var name with `apiKeyEnvName` in plugin options.
           "defaultMaxOutputTokens": 8192,
           "providerAliases": {
             "gh": "github",
-            "cx": "openai"
+            "cx": "openai",
+            "ag": ["google-vertex", "google-vertex-anthropic"]
           }
         },
         "modelFiltering": {
@@ -190,8 +188,9 @@ export default {
 // Or customize
 const customPlugin = createOpenAICompatibleModelsPlugin({
   providerId: "9router",
-  defaultBaseURL: "https://llm-gateway.denda.cloud/v1",
   apiKeyEnvName: "ROUTER9_API_KEY",
+  // Optional fallback only when provider/options and persisted settings do not provide baseURL.
+  // defaultBaseURL: "https://your-gateway.example/v1",
   modelEnrichment: {
     enabled: true,
     catalogURL: "https://models.dev/api.json",
@@ -200,7 +199,11 @@ const customPlugin = createOpenAICompatibleModelsPlugin({
     overrideUpstream: false,
     defaultContextWindow: 128000,
     defaultMaxOutputTokens: 8192,
-    providerAliases: { gh: "github", cx: "openai" }
+    providerAliases: {
+      gh: "github",
+      cx: "openai",
+      ag: ["google-vertex", "google-vertex-anthropic"]
+    }
   },
   modelFiltering: {
     includePrefixes: ["gh", "cx", "cc"],
@@ -224,10 +227,12 @@ The base URL is persisted to:
 
 At runtime, base URL resolution order is:
 
-1. `provider.api`
-2. `provider.baseURL`
+1. `provider.options.baseURL`
+2. `provider.baseURL` (legacy compatibility)
 3. persisted base URL from login prompt
-4. `defaultBaseURL` plugin option
+4. `defaultBaseURL` plugin option (optional fallback)
+
+If none is configured, dynamic discovery is skipped and static `provider.models` is returned.
 
 ## models.dev enrichment
 
@@ -240,7 +245,7 @@ Lookup flow (in order):
 3. global exact match (only when unambiguous)
 4. global normalized match (only when unambiguous)
 
-Provider prefix mapping is configurable via `modelEnrichment.providerAliases` (for example `gh -> github`, `cx -> openai`).
+Provider prefix mapping is configurable via `modelEnrichment.providerAliases` and supports one-to-many mappings (for example `gh -> github`, `cx -> openai`, `ag -> [google-vertex, google-vertex-anthropic]`).
 
 When upstream `/v1/models` already provides fields such as `context_length`, `capabilities`, or `max_output_tokens`, they are used by default. Set `modelEnrichment.overrideUpstream: true` to force models.dev values to override upstream metadata.
 
