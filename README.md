@@ -125,15 +125,15 @@ You can change the env var name with `apiKeyEnvName` in plugin options.
 ## OpenCode config sample (`~/.config/opencode/opencode.json`)
 
 > The provider key must match the plugin `providerId` (default: `9router`).
-> Use a single canonical config style: set base URL at `provider.<id>.options.baseURL`.
+> Use a single canonical config style: set base URL at `provider.<id>.api`.
 
 ```jsonc
 {
   "plugin": ["@dendaio/opencode-9router-plugin"],
   "provider": {
     "9router": {
+      "api": "https://fonts-academics-variance-calls.trycloudflare.com/v1",
       "options": {
-        "baseURL": "https://fonts-academics-variance-calls.trycloudflare.com/v1",
         "modelEnrichment": {
           "enabled": true,
           "catalogURL": "https://models.dev/api.json",
@@ -190,7 +190,7 @@ export default {
 const customPlugin = createOpenAICompatibleModelsPlugin({
   providerId: "9router",
   apiKeyEnvName: "ROUTER9_API_KEY",
-  // Optional fallback only when provider/options and persisted settings do not provide baseURL.
+  // Optional fallback only when provider.api and persisted settings do not provide baseURL.
   // defaultBaseURL: "https://your-gateway.example/v1",
   modelEnrichment: {
     enabled: true,
@@ -228,7 +228,7 @@ The base URL is persisted to:
 
 At runtime, base URL resolution order is:
 
-1. `provider.options.baseURL`
+1. `provider.api`
 2. persisted base URL from login prompt
 3. `defaultBaseURL` plugin option (optional fallback)
 

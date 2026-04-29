@@ -96,6 +96,7 @@ export interface OpenCodeModel {
 }
 
 export interface ProviderConfig {
+  api?: string;
   key?: string;
   options?: Record<string, unknown>;
   models?: Record<string, OpenCodeModel>;
@@ -729,12 +730,12 @@ function openCodeConfigPath(): string {
  * Without this entry the models hook is silently skipped regardless of whether
  * the user has valid credentials.
  *
- * Storing `options.baseURL` and `key` in the provider entry also lets opencode's
+ * Storing `api` and `key` in the provider entry also lets opencode's
  * /connect screen show the provider as properly configured.
  */
 async function ensureProviderInOpenCodeConfig(
   providerId: string,
-  patch: { baseURL?: string; key?: string } = {}
+  patch: { api?: string; key?: string } = {}
 ): Promise<void> {
   const file = openCodeConfigPath();
   let config: Record<string, unknown> = {};
@@ -758,28 +759,29 @@ async function ensureProviderInOpenCodeConfig(
     isObjectRecord(providerObj[providerId]) ? (providerObj[providerId] as Record<string, unknown>) : {};
 
   const updated: Record<string, unknown> = { ...existing };
-  const updatedOptions: Record<string, unknown> = isObjectRecord(existing.options)
-    ? { ...existing.options }
-    : {};
   let changed = false;
 
-  if (patch.baseURL && updatedOptions.baseURL !== patch.baseURL) {
-    updatedOptions.baseURL = patch.baseURL;
+  if (patch.api && updated.api !== patch.api) {
+    updated.api = patch.api;
     changed = true;
   }
   if (patch.key && updated.key !== patch.key) {
     updated.key = patch.key;
     changed = true;
   }
-  if ("baseURL" in updated) {
-    delete updated.baseURL;
+
+  if (isObjectRecord(updated.options) && "baseURL" in updated.options) {
+    const cleanedOptions = { ...updated.options };
+    delete cleanedOptions.baseURL;
+    if (Object.keys(cleanedOptions).length > 0) {
+      updated.options = cleanedOptions;
+    } else {
+      delete updated.options;
+    }
     changed = true;
   }
-
-  if (Object.keys(updatedOptions).length > 0) {
-    updated.options = updatedOptions;
-  } else if ("options" in updated) {
-    delete updated.options;
+  if ("baseURL" in updated) {
+    delete updated.baseURL;
     changed = true;
   }
 
@@ -848,12 +850,8 @@ function pickBaseURL(
   persistedBaseURL?: string
 ): string | undefined {
   if (provider) {
-    if (isObjectRecord(provider.options)) {
-      const optBaseURL =
-        typeof provider.options.baseURL === "string" && provider.options.baseURL.trim()
-          ? normalizeBaseURLInput(provider.options.baseURL)
-          : undefined;
-      if (optBaseURL) return optBaseURL;
+    if (typeof provider.api === "string" && provider.api.trim()) {
+      return normalizeBaseURLInput(provider.api);
     }
   }
 
@@ -1268,7 +1266,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
               // call the provider.models hook. Without this entry opencode never
               // invokes the hook and no models are discovered. Storing baseURL+key
               // lets the /connect screen show the provider as fully configured.
-              await ensureProviderInOpenCodeConfig(providerId, { baseURL: normalizedBaseURL, ...(apiKey ? { key: apiKey } : {}) });
+              await ensureProviderInOpenCodeConfig(providerId, { api: normalizedBaseURL, ...(apiKey ? { key: apiKey } : {}) });
               return apiKey !== undefined ? { type: "success", key: apiKey } : { type: "success" };
             }
           }
