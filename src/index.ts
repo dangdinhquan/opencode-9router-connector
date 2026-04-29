@@ -852,7 +852,7 @@ function pickBaseURL(
     return normalizeBaseURLInput(persistedBaseURL);
   }
 
-  if (defaultBaseURL && !validateBaseURL(defaultBaseURL)) {
+  if (defaultBaseURL && validateBaseURL(defaultBaseURL) === undefined) {
     return normalizeBaseURLInput(defaultBaseURL);
   }
 
@@ -1247,8 +1247,8 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
                   `[opencode-9router-plugin] authorize: invalid baseURL provided (${baseURLError}), using fallback (${fallbackBaseURL})\n`
                 );
               }
-              const normalizedBaseURL = baseURLError
-                ? normalizeBaseURLInput(fallbackBaseURL ?? baseURLInput)
+              const normalizedBaseURL = baseURLError && fallbackBaseURL
+                ? normalizeBaseURLInput(fallbackBaseURL)
                 : normalizeBaseURLInput(baseURLInput);
               const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
               // Persist settings so subsequent runs can reuse them.
