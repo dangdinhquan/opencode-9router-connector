@@ -480,7 +480,7 @@ function resolveProviderAlias(
   if (!providerKey) return [];
   const lower = providerKey.toLowerCase();
   const mapped = aliases?.[lower] ?? [lower];
-  return Array.from(new Set([...mapped, lower]));
+  return mapped.includes(lower) ? mapped : [...mapped, lower];
 }
 
 function toOpenCodeModel(
@@ -1248,7 +1248,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
                 );
               }
               const normalizedBaseURL = baseURLError
-                ? normalizeBaseURLInput(fallbackBaseURL!)
+                ? normalizeBaseURLInput(fallbackBaseURL ?? baseURLInput)
                 : normalizeBaseURLInput(baseURLInput);
               const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
               // Persist settings so subsequent runs can reuse them.
