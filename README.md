@@ -1,12 +1,12 @@
 # opencode-9router-plugin
 
-A production-ready OpenCode plugin that auto-connects to any OpenAI-compatible API and auto-discovers available models from `GET /v1/models`.
+OpenCode plugin for 9router and other OpenAI-compatible gateways.
 
-The plugin maps discovered models into OpenCode `provider.models` format, auto-names them as `Provider - Model`, enriches capability/token metadata from `https://models.dev/api.json`, supports include/exclude filtering by model ID, and safely falls back to static models when discovery cannot run.
+It auto-discovers models from `GET /v1/models`, maps them to OpenCode `provider.models`, enriches metadata from `https://models.dev/api.json`, supports filtering, and falls back to static models when discovery is unavailable.
 
-## Installation
+## Install and use in OpenCode
 
-Add the plugin to your OpenCode config file (`~/.config/opencode/opencode.json`):
+1) Add plugin to your OpenCode config (`~/.config/opencode/opencode.json`):
 
 ```json
 {
@@ -14,15 +14,35 @@ Add the plugin to your OpenCode config file (`~/.config/opencode/opencode.json`)
 }
 ```
 
-OpenCode will automatically resolve and load the plugin on next startup.
+2) Login and set credentials:
 
-### Why `provider` is required
+```bash
+opencode auth login
+```
 
-OpenCode only calls a plugin's `provider.models` hook for providers that appear in the `provider` section of `opencode.json` (note: the key is singular `"provider"`, not `"providers"`). Without an entry there, the models hook is silently skipped and no models are discovered.
+or inside OpenCode:
 
-The plugin handles this automatically: when you run `opencode auth login` and complete the 9router login flow, the plugin writes `"9router": {}` into `opencode.json` for you. After that, restart opencode once and `opencode models` will show the 9router models.
+```
+/connect 9router
+```
 
-If you prefer to add it manually (or if the auto-registration does not trigger), add the entry yourself:
+During login, OpenCode asks for:
+- API key
+- Base URL (for example `https://your-gateway.example/v1`)
+
+3) Restart OpenCode, then verify:
+
+```
+/models
+```
+
+You should see models under provider `9router`.
+
+## Why `provider` entry matters
+
+OpenCode only calls `provider.models` for providers present in the `provider` section (singular key: `"provider"`).
+
+This plugin auto-registers the provider during login. If needed, add it manually:
 
 ```json
 {
@@ -33,13 +53,102 @@ If you prefer to add it manually (or if the auto-registration does not trigger),
 }
 ```
 
-## Local Development
+## Configuration
 
-Use this workflow when developing or testing the plugin directly from source (e.g. inside a Codespace or local clone of this repo).
+Provider key must match plugin provider id (default: `9router`).
 
-> **Note**: OpenCode installs npm plugins using its own internal resolver (not `npm link`). For local development you must point the config at your built file directly.
+```jsonc
+{
+  "plugin": ["@dendaio/opencode-9router-plugin"],
+  "provider": {
+    "9router": {
+      "api": "https://your-gateway.example/v1",
+      "options": {
+        "modelEnrichment": {
+          "enabled": true,
+          "catalogURL": "https://models.dev/api.json",
+          "timeoutMs": 3000,
+          "cacheTtlMs": 600000,
+          "overrideUpstream": false,
+          "defaultContextWindow": 128000,
+          "defaultMaxOutputTokens": 8192,
+          "providerAliases": {
+            "gh": "github",
+            "cx": "openai",
+            "ag": ["google-vertex", "google-vertex-anthropic"]
+          }
+        },
+        "modelFiltering": {
+          "includePrefixes": ["gh", "cx", "cc"],
+          "excludePrefixes": ["ag"],
+          "includeModelIdRegex": "/^(gpt|o\\d)/i",
+          "excludeModelIdRegex": "/audio|embedding/i"
+        }
+      },
+      "models": {
+        "gpt-4o-mini": {
+          "id": "gpt-4o-mini",
+          "name": "gpt-4o-mini",
+          "family": "gpt-4o",
+          "release_date": "2024-07-18",
+          "attachment": false,
+          "reasoning": false,
+          "temperature": true,
+          "tool_call": true,
+          "limit": { "context": 128000, "output": 8192 }
+        }
+      }
+    }
+  }
+}
+```
 
-### 1. Install dependencies and build
+## Enrichment behavior
+
+- Runtime enrichment fetches directly from `https://models.dev/api.json` (or your `modelEnrichment.catalogURL`).
+- Upstream fields win by default; set `modelEnrichment.overrideUpstream: true` to prefer models.dev values.
+- If no match is found, plugin uses safe defaults for capabilities and token limits.
+
+## Model filtering
+
+Use these options under `provider.9router.options.modelFiltering`:
+- `includePrefixes`
+- `excludePrefixes`
+- `includeModelIdRegex`
+- `excludeModelIdRegex`
+
+Example: exclude quality suffix variants.
+
+```jsonc
+{
+  "provider": {
+    "9router": {
+      "options": {
+        "modelFiltering": {
+          "excludeModelIdRegex": "(-high|-low|-none|-xhigh)$"
+        }
+      }
+    }
+  }
+}
+```
+
+## Environment variables
+
+Create `.env` from `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Default key:
+- `ROUTER9_API_KEY`
+
+## Development
+
+Use this workflow for local plugin development from source.
+
+### 1) Install and build
 
 ```bash
 npm install -g opencode-ai
@@ -47,9 +156,9 @@ npm install
 npm run build
 ```
 
-### 2. Configure OpenCode to load from the local build
+### 2) Point OpenCode to local build
 
-Add the **absolute path** to the built entrypoint in `~/.config/opencode/opencode.json`:
+Use absolute path to `dist/index.js` in `~/.config/opencode/opencode.json`:
 
 ```json
 {
@@ -60,166 +169,42 @@ Add the **absolute path** to the built entrypoint in `~/.config/opencode/opencod
 }
 ```
 
-### 3. Watch mode for active development
+### 3) Run watch mode
 
-In one terminal, start the incremental rebuild watcher:
+Terminal 1:
 
 ```bash
 npm run dev
 ```
 
-In another terminal, run OpenCode:
+Terminal 2:
 
 ```bash
 opencode
 ```
 
-Changes to source files are rebuilt automatically; restart OpenCode to pick them up.
+Restart OpenCode after rebuilds to pick up new plugin output.
 
-### 4. Verify the plugin loaded
+### 4) Verify during development
 
-Inside OpenCode, run:
+Inside OpenCode:
 
 ```
 /connect 9router
 /models
 ```
 
-You should see the `9router` provider and its discovered models.
-
-### Debug logging
+### 5) Debug logs
 
 ```bash
 OPENCODE_LOG=debug opencode
 ```
 
-## Publish to npm (GitHub Actions)
-
-This repository includes a workflow at:
-
-- `.github/workflows/publish-npm.yml`
-
-The workflow publishes to npm when:
-
-- a Git tag matching `v*` is pushed (for example `v1.0.0`), or
-- triggered manually via `workflow_dispatch`.
-
-Required repository secret:
-
-- `NPM_TOKEN`: npm automation token with publish permission for `opencode-9router-plugin`.
-
-## Environment variables
-
-Create a `.env` file from `.env.example`:
-
-```bash
-cp .env.example .env
-```
-
-Required by default:
-
-- `ROUTER9_API_KEY`: API key used for model discovery and auth hook loading.
-
-You can change the env var name with `apiKeyEnvName` in plugin options.
-
-## OpenCode provider config example
-
-> The provider key must match the plugin `providerId` (default: `9router`).
-
-```ts
-providers: {
-  "9router": {
-    // Either field can be used; plugin resolves api first, then baseURL.
-    // Defaults to https://llm-gateway.denda.cloud/v1 if not specified.
-    api: "https://llm-gateway.denda.cloud/v1",
-    // baseURL: "https://llm-gateway.denda.cloud/v1",
-    models: {
-      // Static fallback models. Dynamic discovery overrides by model id.
-      "gpt-4o-mini": {
-        id: "gpt-4o-mini",
-        name: "gpt-4o-mini",
-        family: "gpt-4o",
-        release_date: "2024-07-18",
-        attachment: false,
-        reasoning: false,
-        temperature: true,
-        tool_call: true,
-        limit: { context: 128000, output: 8192 }
-      }
-    }
-  }
-}
-```
-
-## Usage
-
-```ts
-import plugin, { createOpenAICompatibleModelsPlugin } from "opencode-9router-plugin";
-
-// Use default instance
-export default {
-  plugin: [plugin]
-};
-
-// Or customize
-const customPlugin = createOpenAICompatibleModelsPlugin({
-  providerId: "9router",
-  defaultBaseURL: "https://llm-gateway.denda.cloud/v1",
-  apiKeyEnvName: "ROUTER9_API_KEY",
-  defaultContextWindow: 128000,
-  defaultMaxOutputTokens: 8192,
-  modelsDevCatalogURL: "https://models.dev/api.json",
-  modelsDevTimeoutMs: 3000,
-  modelsDevCacheTtlMs: 600000,
-  includeModelIdRegex: /^gpt|^o\d/i,
-  excludeModelIdRegex: /audio|embedding/i
-});
-```
-
-## Interactive login prompts (`/connect` / `opencode auth login`)
-
-When you log in with the plugin provider (`9router` by default), OpenCode will prompt for:
-
-- API key (built-in API auth prompt)
-- Base URL (plugin auth prompt)
-
-The base URL is persisted to:
-
-- `~/.config/opencode/opencode-9router-plugin.<providerId>.json`
-
-At runtime, base URL resolution order is:
-
-1. `provider.api`
-2. `provider.baseURL`
-3. persisted base URL from login prompt
-4. `defaultBaseURL` plugin option
-
-## models.dev enrichment
-
-`GET /v1/models` usually does not include capability and limit details. This plugin enriches discovered models using `https://models.dev/api.json`.
-
-Matching supports common variants for OpenCode compatibility:
-
-- `provider/model` (ex: `openai/gpt-4o-mini`)
-- `provider:model` (ex: `openai:gpt-4o-mini`)
-- bare model id (ex: `gpt-4o-mini`)
-
-If no models.dev match is found, safe defaults are used:
-
-- `attachment: false`
-- `temperature: true`
-- `tool_call: true`
-- `reasoning: true` only for inferred `o1` and `o3` families
-- `limit.context` and `limit.output` from plugin defaults
-
 ## Troubleshooting
 
-- **401 Unauthorized**: verify `ROUTER9_API_KEY` (or your configured `apiKeyEnvName`) is set and valid.
-- **404 Not Found**: check your base URL. The plugin calls:
-  - `{baseURL}/models` when base URL already ends with `/v1`
-  - `{baseURL}/v1/models` otherwise
-- **CORS errors**: browser-only environments may block direct API calls; run via a trusted backend/proxy.
-- **No discovered models**: plugin will keep static `provider.models` as fallback when API key is missing, request fails, or schema is invalid.
+- **401 Unauthorized**: check `ROUTER9_API_KEY` (or your configured key source) and gateway auth requirements.
+- **404 Not Found**: check `baseURL`; plugin calls `{baseURL}/models` if URL ends with `/v1`, otherwise `{baseURL}/v1/models`.
+- **No discovered models**: plugin keeps static fallback models when fetch fails, schema is invalid, or baseURL is missing.
 
 ## License
 

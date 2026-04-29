@@ -2,17 +2,47 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+/** Options for the models.dev enrichment sub-system. */
+export interface ModelEnrichmentOptions {
+  /** Set to `false` to disable models.dev enrichment entirely. Defaults to `true`. */
+  enabled?: boolean;
+  /** URL of the models.dev catalog JSON. Defaults to `"https://models.dev/api.json"`. */
+  catalogURL?: string;
+  /** HTTP timeout in ms for fetching the catalog. Defaults to `3000`. */
+  timeoutMs?: number;
+  /** How long (in ms) to cache the catalog in memory. Defaults to `10 * 60 * 1000`. */
+  cacheTtlMs?: number;
+  /** When `true`, models.dev values override upstream metadata. Defaults to `false`. */
+  overrideUpstream?: boolean;
+  /** Maps gateway provider prefixes to one or more models.dev provider keys (e.g. `{ gh: "github", ag: ["google-vertex", "google-vertex-anthropic"] }`). */
+  providerAliases?: Record<string, string | string[]>;
+  /** Fallback context window when upstream + models.dev do not provide limits. */
+  defaultContextWindow?: number;
+  /** Fallback max output tokens when upstream + models.dev do not provide limits. */
+  defaultMaxOutputTokens?: number;
+}
+
+export interface ModelFilteringOptions {
+  /** Only include models whose prefix (the part before the first `/`) is in this list.
+   * Comparison is case-insensitive. When omitted or empty, all prefixes are allowed. */
+  includePrefixes?: string[];
+  /** Exclude models whose prefix (the part before the first `/`) is in this list.
+   * Comparison is case-insensitive. Applied after include prefix filtering. */
+  excludePrefixes?: string[];
+  /** Allow-list upstream models by ID. Models must match this regex to be included. */
+  includeModelIdRegex?: RegExp;
+  /** Block-list upstream models by ID. Applied after include filters. */
+  excludeModelIdRegex?: RegExp;
+}
+
 export interface RouterPluginOptions {
   providerId?: string;
   defaultBaseURL?: string;
   apiKeyEnvName?: string;
-  defaultContextWindow?: number;
-  defaultMaxOutputTokens?: number;
-  modelsDevCatalogURL?: string;
-  modelsDevTimeoutMs?: number;
-  modelsDevCacheTtlMs?: number;
-  includeModelIdRegex?: RegExp;
-  excludeModelIdRegex?: RegExp;
+  /** models.dev enrichment configuration. */
+  modelEnrichment?: ModelEnrichmentOptions;
+  /** Model filtering configuration. */
+  modelFiltering?: ModelFilteringOptions;
 }
 
 /** Model format expected by opencode (ModelV2). */
@@ -67,7 +97,6 @@ export interface OpenCodeModel {
 
 export interface ProviderConfig {
   api?: string;
-  baseURL?: string;
   key?: string;
   options?: Record<string, unknown>;
   models?: Record<string, OpenCodeModel>;
@@ -124,7 +153,31 @@ export interface PluginModule {
 
 type UpstreamModel = {
   id: string;
+  name?: string;
   created?: number;
+  context_length?: number;
+  max_output_tokens?: number;
+  capabilities?: {
+    attachment?: boolean;
+    reasoning?: boolean;
+    temperature?: boolean;
+    tool_call?: boolean;
+    tool_calling?: boolean;
+    supports_tools?: boolean;
+    vision?: boolean;
+    input?: {
+      image?: boolean;
+      pdf?: boolean;
+    };
+  };
+  input_modalities?: string[];
+  output_modalities?: string[];
+  attachment?: boolean;
+  reasoning?: boolean;
+  temperature?: boolean;
+  tool_call?: boolean;
+  tool_calling?: boolean;
+  vision?: boolean;
 };
 
 type UpstreamModelList = {
@@ -141,6 +194,10 @@ type ModelsDevModel = {
   reasoning?: boolean;
   temperature?: boolean;
   tool_call?: boolean;
+  modalities?: {
+    input?: string[];
+    output?: string[];
+  };
   limit?: {
     context?: number;
     output?: number;
@@ -152,18 +209,26 @@ type ModelsDevProvider = {
 };
 
 type ModelsDevCatalog = Record<string, ModelsDevProvider>;
+type ModelsDevIndex = {
+  exactByProvider: Map<string, Map<string, ModelsDevModel>>;
+  normalizedByProvider: Map<string, Map<string, ModelsDevModel>>;
+  exactGlobal: Map<string, ModelsDevModel[]>;
+  normalizedGlobal: Map<string, ModelsDevModel[]>;
+};
 
-const DEFAULT_OPTIONS: Required<
-  Omit<RouterPluginOptions, "includeModelIdRegex" | "excludeModelIdRegex">
-> = {
-  providerId: "9router",
-  defaultBaseURL: "https://api.your_9router.com/v1",
-  apiKeyEnvName: "ROUTER9_API_KEY",
+const DEFAULT_MODEL_ENRICHMENT: Required<Omit<ModelEnrichmentOptions, "providerAliases">> = {
+  enabled: true,
+  catalogURL: "https://models.dev/api.json",
+  timeoutMs: 3000,
+  cacheTtlMs: 10 * 60 * 1000,
+  overrideUpstream: false,
   defaultContextWindow: 128000,
-  defaultMaxOutputTokens: 8192,
-  modelsDevCatalogURL: "https://models.dev/api.json",
-  modelsDevTimeoutMs: 3000,
-  modelsDevCacheTtlMs: 10 * 60 * 1000
+  defaultMaxOutputTokens: 8192
+};
+
+const DEFAULT_OPTIONS = {
+  providerId: "9router",
+  apiKeyEnvName: "ROUTER9_API_KEY"
 };
 
 type PluginSettings = {
@@ -179,110 +244,28 @@ type ModelsDevCache = {
 
 let modelsDevCache: ModelsDevCache | undefined;
 
-// Provider alias → display name mapping.
-// Aliases are sourced from 9router's provider definitions:
-// https://github.com/decolua/9router/blob/main/src/shared/constants/providers.js
-const PROVIDER_ALIAS_TO_NAME: Record<string, string> = {
-  "9router": "9Router",
-
-  // Free Providers
-  kr: "Kiro AI",
-  kiro: "Kiro AI",
-  qw: "Qwen Code",
-  qwen: "Qwen Code",
-  gc: "Gemini CLI",
-  "gemini-cli": "Gemini CLI",
-  if: "iFlow AI",
-  iflow: "iFlow AI",
-  iflowcn: "iFlow AI",
-  oc: "OpenCode Free",
-  opencode: "OpenCode Free",
-
-  // OAuth Providers
-  cc: "Claude Code",
-  claude: "Claude Code",
-  ag: "Antigravity",
-  antigravity: "Antigravity",
-  cx: "OpenAI Codex",
-  codex: "OpenAI Codex",
-  gh: "GitHub Copilot",
-  github: "GitHub Copilot",
-  "github-copilot": "GitHub Copilot",
-  cu: "Cursor IDE",
-  cursor: "Cursor IDE",
-  kc: "Kilo Code",
-  kilocode: "Kilo Code",
-  cl: "Cline",
-  cline: "Cline",
-
-  // Free Tier Providers
-  openrouter: "OpenRouter",
-  nvidia: "NVIDIA NIM",
-  ollama: "Ollama Cloud",
-  vx: "Vertex AI",
-  vertex: "Vertex AI",
-  gemini: "Gemini",
-  google: "Google",
-  bpm: "BytePlus ModelArk",
-  byteplus: "BytePlus ModelArk",
-
-  // API Key Providers
-  openai: "OpenAI",
-  anthropic: "Anthropic",
-  ocg: "OpenCode Go",
-  "opencode-go": "OpenCode Go",
-  azure: "Azure OpenAI",
-  ds: "DeepSeek",
-  deepseek: "DeepSeek",
-  groq: "Groq",
-  xai: "xAI (Grok)",
-  mistral: "Mistral",
-  pplx: "Perplexity",
-  perplexity: "Perplexity",
-  together: "Together AI",
-  fireworks: "Fireworks AI",
-  cerebras: "Cerebras",
-  cohere: "Cohere",
-  nebius: "Nebius AI",
-  siliconflow: "SiliconFlow",
-  hyp: "Hyperbolic",
-  hyperbolic: "Hyperbolic",
-  glm: "GLM Coding",
-  "glm-cn": "GLM (China)",
-  kimi: "Kimi",
-  minimax: "Minimax Coding",
-  "minimax-cn": "Minimax (China)",
-  alicode: "Alibaba",
-  "alicode-intl": "Alibaba Intl",
-  ark: "Volcengine Ark",
-  "volcengine-ark": "Volcengine Ark",
-  hf: "HuggingFace",
-  huggingface: "HuggingFace",
-  bb: "Blackbox AI",
-  blackbox: "Blackbox AI",
-  ch: "Chutes AI",
-  chutes: "Chutes AI",
-  "ollama-local": "Ollama Local",
-  vxp: "Vertex Partner",
-  "vertex-partner": "Vertex Partner",
-  dg: "Deepgram",
-  deepgram: "Deepgram",
-  aai: "AssemblyAI",
-  assemblyai: "AssemblyAI",
-  nb: "NanoBanana",
-  nanobanana: "NanoBanana",
-  el: "ElevenLabs",
-  elevenlabs: "ElevenLabs",
-
-  // Web Cookie Providers
-  gw: "Grok Web",
-  "grok-web": "Grok Web",
-  pw: "Perplexity Web",
-  "perplexity-web": "Perplexity Web",
-
-  // Legacy / fallback aliases
-  op: "OpenCode",
-  gl: "GitHub Copilot"
+const DEFAULT_MODELS_DEV_PROVIDER_ALIASES: Record<string, string | string[]> = {
+  oai: "openai",
+  openai: "openai",
+  cx: "openai",
+  codex: "openai",
+  gh: "github",
+  gl: "github",
+  github: "github",
+  anthropic: "anthropic",
+  claude: "anthropic",
+  gemini: "google",
+  google: "google",
+  deepseek: "deepseek",
+  ds: "deepseek",
+  mistral: "mistral",
+  xai: "xai",
+  groq: "groq",
+  together: "together",
+  openrouter: "openrouter",
+  perplexity: "perplexity",
+  pplx: "perplexity",
+  cohere: "cohere"
 };
 
 function normalizeModelsURL(baseURL: string): string {
@@ -329,71 +312,278 @@ function inferFamily(modelId: string): string {
   return fallback || "unknown";
 }
 
-/**
- * Split a 9Router model ID into [providerAlias, modelPart].
- * 9Router uses `{alias}/{model}` or `{alias}:{model}` conventions.
- * Returns [undefined, fullId] when no provider prefix is detected.
- */
-function splitProviderAlias(modelId: string): [string | undefined, string] {
-  const slashIdx = modelId.indexOf("/");
-  const colonIdx = modelId.indexOf(":");
-  const sep = slashIdx !== -1 && (colonIdx === -1 || slashIdx < colonIdx) ? slashIdx : colonIdx;
-  if (sep > 0) {
-    return [modelId.slice(0, sep), modelId.slice(sep + 1)];
+function toStrictlyPositiveNumber(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return undefined;
   }
-  return [undefined, modelId];
+  return value;
+}
+
+function toRegex(value: unknown): RegExp | undefined {
+  if (value instanceof RegExp) return value;
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  const slashDelimited = trimmed.match(/^\/(.+)\/([a-zA-Z]*)$/);
+  if (slashDelimited) {
+    if (!/^[gimsuy]*$/.test(slashDelimited[2])) {
+      return undefined;
+    }
+    try {
+      return new RegExp(slashDelimited[1], slashDelimited[2]);
+    } catch {
+      return undefined;
+    }
+  }
+
+  try {
+    return new RegExp(trimmed);
+  } catch {
+    return undefined;
+  }
+}
+
+function toProviderAliasRecord(value: unknown): Record<string, string[]> | undefined {
+  if (!isObjectRecord(value)) return undefined;
+  const out: Record<string, string[]> = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (typeof v === "string" && v.trim()) {
+      out[k.toLowerCase()] = [v.trim().toLowerCase()];
+      continue;
+    }
+    if (Array.isArray(v)) {
+      const aliases = v
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim().toLowerCase())
+        .filter((item) => item.length > 0);
+      if (aliases.length > 0) {
+        out[k.toLowerCase()] = Array.from(new Set(aliases));
+      }
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function mergeProviderAliasRecords(
+  ...records: Array<Record<string, string[]> | undefined>
+): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const record of records) {
+    if (!record) continue;
+    for (const [k, values] of Object.entries(record)) {
+      const existing = out[k] ?? [];
+      out[k] = Array.from(new Set([...existing, ...values]));
+    }
+  }
+  return out;
+}
+
+function toStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function firstBoolean(...values: unknown[]): boolean | undefined {
+  for (const value of values) {
+    if (typeof value === "boolean") {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function pickNumberWithOverride(
+  upstream: number | undefined,
+  enriched: number | undefined,
+  fallback: number,
+  override: boolean
+): number {
+  if (override) {
+    return enriched ?? upstream ?? fallback;
+  }
+  return upstream ?? enriched ?? fallback;
+}
+
+function pickBooleanWithOverride(
+  upstream: boolean | undefined,
+  enriched: boolean | undefined,
+  fallback: boolean,
+  override: boolean
+): boolean {
+  if (override) {
+    return enriched ?? upstream ?? fallback;
+  }
+  return upstream ?? enriched ?? fallback;
 }
 
 /**
- * Map a provider alias to its display name using the known alias table.
- * Lowercase-normalizes the alias before lookup.
+ * Normalize model IDs for fuzzy matching:
+ * - strips date suffixes (`-2024-11-20`)
+ * - strips trailing version tags (`-v1`, `-4.5`)
+ * - strips release labels (`-preview`, `-latest`, `-stable`)
+ * - normalizes `_` to `-`
  */
-function providerDisplayName(alias: string): string {
-  return PROVIDER_ALIAS_TO_NAME[alias.toLowerCase()] ?? alias;
+function normalizeModelKey(modelId: string): string {
+  return modelId
+    .toLowerCase()
+    .replace(/-\d{4}-\d{2}-\d{2}$/, "")
+    .replace(/-v\d+$/, "")
+    .replace(/-(preview|latest|stable)$/i, "")
+    .replace(/-\d+\.\d+$/, "")
+    .replace(/_/g, "-");
+}
+
+function splitModelForLookup(
+  modelId: string,
+  providerId: string
+): { providerKey: string | null; modelKey: string } {
+  const trimmed = modelId.trim();
+  const gatewayPrefixes = new Set([
+    providerId.toLowerCase(),
+    "9router",
+    "omniroute"
+  ]);
+
+  const slashParts = trimmed.split("/").filter((part) => part.trim() !== "");
+  if (slashParts.length >= 3 && gatewayPrefixes.has(slashParts[0].toLowerCase())) {
+    return {
+      providerKey: slashParts[1],
+      modelKey: slashParts.slice(2).join("/")
+    };
+  }
+  if (slashParts.length >= 2) {
+    return {
+      providerKey: slashParts[0],
+      modelKey: slashParts.slice(1).join("/")
+    };
+  }
+
+  const colonIdx = trimmed.indexOf(":");
+  if (colonIdx > 0) {
+    return {
+      providerKey: trimmed.slice(0, colonIdx),
+      modelKey: trimmed.slice(colonIdx + 1)
+    };
+  }
+
+  return { providerKey: null, modelKey: trimmed };
+}
+
+function resolveProviderAlias(
+  providerKey: string | null,
+  aliases?: Record<string, string[]>
+): string[] {
+  if (!providerKey) return [];
+  const lower = providerKey.toLowerCase();
+  const mapped = aliases?.[lower] ?? [lower];
+  return mapped.includes(lower) ? mapped : [...mapped, lower];
 }
 
 function toOpenCodeModel(
   upstream: UpstreamModel,
-  _providerId: string,
+  providerId: string,
   baseURL: string,
   contextWindow: number,
   maxOutputTokens: number,
   enriched?: ModelsDevModel,
-  apiKey?: string
+  apiKey?: string,
+  modelsDevOverrideUpstream: boolean = false
 ): OpenCodeModel {
-  const [providerAlias, modelPart] = splitProviderAlias(upstream.id);
-  const providerGroup = providerAlias
-    ? `9Router - ${providerDisplayName(providerAlias)}`
-    : "9Router";
-
-  const family = providerGroup;
-  const displayName =
-    typeof enriched?.name === "string" && enriched.name.trim()
-      ? enriched.name
-      : modelPart;
+  const { modelKey } = splitModelForLookup(upstream.id, providerId);
+  const family =
+    (typeof enriched?.family === "string" && enriched.family.trim() ? enriched.family : undefined) ||
+    inferFamily(modelKey);
+  const displayName = upstream.id;
   const releaseDate =
     typeof enriched?.release_date === "string" && enriched.release_date.trim()
       ? enriched.release_date
       : toDate(upstream.created);
-  const enrichedContext = enriched?.limit?.context;
-  const enrichedOutput = enriched?.limit?.output;
-  const context =
-    typeof enrichedContext === "number" && Number.isFinite(enrichedContext) && enrichedContext > 0
-      ? enrichedContext
-      : contextWindow;
-  const output =
-    typeof enrichedOutput === "number" && Number.isFinite(enrichedOutput) && enrichedOutput > 0
-      ? enrichedOutput
-      : maxOutputTokens;
+  const upstreamContext = toStrictlyPositiveNumber(upstream.context_length);
+  const upstreamOutput = toStrictlyPositiveNumber(upstream.max_output_tokens);
+  const enrichedContext = toStrictlyPositiveNumber(enriched?.limit?.context);
+  const enrichedOutput = toStrictlyPositiveNumber(enriched?.limit?.output);
 
-  const attachment = typeof enriched?.attachment === "boolean" ? enriched.attachment : false;
-  const inferredFamily = inferFamily(modelPart);
-  const reasoning =
-    typeof enriched?.reasoning === "boolean"
-      ? enriched.reasoning
-      : inferredFamily === "o1" || inferredFamily === "o3";
-  const temperature = typeof enriched?.temperature === "boolean" ? enriched.temperature : true;
-  const toolcall = typeof enriched?.tool_call === "boolean" ? enriched.tool_call : true;
+  const context = pickNumberWithOverride(
+    upstreamContext,
+    enrichedContext,
+    contextWindow,
+    modelsDevOverrideUpstream
+  );
+  const output = pickNumberWithOverride(
+    upstreamOutput,
+    enrichedOutput,
+    maxOutputTokens,
+    modelsDevOverrideUpstream
+  );
+
+  const upstreamVision = firstBoolean(
+    upstream.capabilities?.vision,
+    upstream.vision,
+    upstream.capabilities?.input?.image,
+    Array.isArray(upstream.input_modalities) ? upstream.input_modalities.includes("image") : undefined
+  );
+  const upstreamAttachment = firstBoolean(
+    upstream.capabilities?.attachment,
+    upstream.attachment,
+    Array.isArray(upstream.input_modalities)
+      ? upstream.input_modalities.includes("image") || upstream.input_modalities.includes("pdf")
+      : undefined
+  );
+  const upstreamReasoning = firstBoolean(upstream.capabilities?.reasoning, upstream.reasoning);
+  const upstreamTemperature = firstBoolean(upstream.capabilities?.temperature, upstream.temperature);
+  const upstreamToolcall = firstBoolean(
+    upstream.capabilities?.tool_calling,
+    upstream.capabilities?.tool_call,
+    upstream.capabilities?.supports_tools,
+    upstream.tool_calling,
+    upstream.tool_call
+  );
+
+  const enrichedVision = firstBoolean(
+    enriched?.modalities?.input?.includes("image"),
+    enriched?.attachment
+  );
+  const enrichedAttachment = firstBoolean(
+    enriched?.attachment,
+    enriched?.modalities?.input?.includes("image")
+  );
+  const inferredFamily = inferFamily(modelKey);
+  const inferredReasoning = inferredFamily === "o1" || inferredFamily === "o3";
+
+  const attachment = pickBooleanWithOverride(
+    upstreamAttachment,
+    enrichedAttachment,
+    false,
+    modelsDevOverrideUpstream
+  );
+  const reasoning = pickBooleanWithOverride(
+    upstreamReasoning,
+    enriched?.reasoning,
+    inferredReasoning,
+    modelsDevOverrideUpstream
+  );
+  const temperature = pickBooleanWithOverride(
+    upstreamTemperature,
+    enriched?.temperature,
+    true,
+    modelsDevOverrideUpstream
+  );
+  const toolcall = pickBooleanWithOverride(
+    upstreamToolcall,
+    enriched?.tool_call,
+    true,
+    modelsDevOverrideUpstream
+  );
+  const supportsVision = pickBooleanWithOverride(
+    upstreamVision,
+    enrichedVision,
+    attachment,
+    modelsDevOverrideUpstream
+  );
 
   return {
     id: upstream.id,
@@ -413,7 +603,7 @@ function toOpenCodeModel(
       input: {
         text: true,
         audio: false,
-        image: attachment,
+        image: supportsVision,
         video: false,
         pdf: attachment
       },
@@ -453,6 +643,22 @@ function regexPass(regex: RegExp | undefined, value: string): boolean {
   return regex.test(value);
 }
 
+function prefixPass(includePrefixes: string[] | undefined, modelId: string, pluginProviderId: string): boolean {
+  if (!includePrefixes || includePrefixes.length === 0) return true;
+  const { providerKey } = splitModelForLookup(modelId, pluginProviderId);
+  if (!providerKey) return false;
+  const normalized = providerKey.toLowerCase();
+  return includePrefixes.includes(normalized);
+}
+
+function prefixExcludePass(excludePrefixes: string[] | undefined, modelId: string, pluginProviderId: string): boolean {
+  if (!excludePrefixes || excludePrefixes.length === 0) return true;
+  const { providerKey } = splitModelForLookup(modelId, pluginProviderId);
+  if (!providerKey) return true;
+  const normalized = providerKey.toLowerCase();
+  return !excludePrefixes.includes(normalized);
+}
+
 function normalizeBaseURLInput(value: string): string {
   let out = value.trim();
   while (out.endsWith("/")) {
@@ -479,12 +685,39 @@ function validateBaseURL(value: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Resolve the opencode configuration directory using the same logic as
+ * opencode itself:
+ *  - Linux / other: $XDG_CONFIG_HOME/opencode  (falls back to ~/.config/opencode)
+ *  - macOS:         ~/Library/Application Support/opencode
+ *  - Windows:       %APPDATA%\opencode
+ */
+function openCodeConfigDir(): string {
+  const home = os.homedir();
+  if (process.platform === "darwin") {
+    return path.join(home, "Library", "Application Support", "opencode");
+  }
+  if (process.platform === "win32") {
+    const appData = process.env.APPDATA;
+    if (appData) return path.join(appData, "opencode");
+    return path.join(home, "AppData", "Roaming", "opencode");
+  }
+  // Linux and everything else: honor XDG_CONFIG_HOME
+  const xdg = process.env.XDG_CONFIG_HOME;
+  const configBase = xdg && path.isAbsolute(xdg) ? xdg : path.join(home, ".config");
+  return path.join(configBase, "opencode");
+}
+
 function settingsFilePath(providerId: string): string {
-  return path.join(os.homedir(), ".config", "opencode", `opencode-9router-plugin.${providerId}.json`);
+  return path.join(openCodeConfigDir(), `opencode-9router-plugin.${providerId}.json`);
 }
 
 function openCodeConfigPath(): string {
-  return path.join(os.homedir(), ".config", "opencode", "opencode.json");
+  // Honor the same env var that opencode itself uses to override the config
+  // file location (e.g. OPENCODE_CONFIG=/path/to/custom.json opencode …).
+  const envOverride = process.env.OPENCODE_CONFIG;
+  if (envOverride && path.isAbsolute(envOverride)) return envOverride;
+  return path.join(openCodeConfigDir(), "opencode.json");
 }
 
 /**
@@ -496,8 +729,14 @@ function openCodeConfigPath(): string {
  * (note: the key is singular "provider", not "providers").
  * Without this entry the models hook is silently skipped regardless of whether
  * the user has valid credentials.
+ *
+ * Storing `api` and `key` in the provider entry also lets opencode's
+ * /connect screen show the provider as properly configured.
  */
-async function ensureProviderInOpenCodeConfig(providerId: string): Promise<void> {
+async function ensureProviderInOpenCodeConfig(
+  providerId: string,
+  patch: { api?: string; key?: string } = {}
+): Promise<void> {
   const file = openCodeConfigPath();
   let config: Record<string, unknown> = {};
   try {
@@ -516,12 +755,42 @@ async function ensureProviderInOpenCodeConfig(providerId: string): Promise<void>
       ? (providerSection as Record<string, unknown>)
       : {};
 
-  if (typeof providerObj[providerId] !== "undefined") {
-    // already registered — nothing to do
+  const existing: Record<string, unknown> =
+    isObjectRecord(providerObj[providerId]) ? (providerObj[providerId] as Record<string, unknown>) : {};
+
+  const updated: Record<string, unknown> = { ...existing };
+  let changed = false;
+
+  if (patch.api && updated.api !== patch.api) {
+    updated.api = patch.api;
+    changed = true;
+  }
+  if (patch.key && updated.key !== patch.key) {
+    updated.key = patch.key;
+    changed = true;
+  }
+
+  if (isObjectRecord(updated.options) && "baseURL" in updated.options) {
+    const cleanedOptions = { ...updated.options };
+    delete cleanedOptions.baseURL;
+    if (Object.keys(cleanedOptions).length > 0) {
+      updated.options = cleanedOptions;
+    } else {
+      delete updated.options;
+    }
+    changed = true;
+  }
+  if ("baseURL" in updated) {
+    delete updated.baseURL;
+    changed = true;
+  }
+
+  // Skip the write if nothing has changed.
+  if (typeof providerObj[providerId] !== "undefined" && !changed) {
     return;
   }
 
-  providerObj[providerId] = {};
+  providerObj[providerId] = updated;
   config.provider = providerObj;
 
   await mkdir(path.dirname(file), { recursive: true });
@@ -577,44 +846,24 @@ function pickApiKey(
 
 function pickBaseURL(
   provider: ProviderConfig | undefined,
-  defaultBaseURL: string,
+  defaultBaseURL: string | undefined,
   persistedBaseURL?: string
-): string {
+): string | undefined {
   if (provider) {
-    // New ProviderV2 format: baseURL/api stored under provider.options
-    if (isObjectRecord(provider.options)) {
-      const optApi =
-        typeof provider.options.api === "string" && provider.options.api.trim()
-          ? normalizeBaseURLInput(provider.options.api)
-          : undefined;
-      if (optApi) return optApi;
-
-      const optBaseURL =
-        typeof provider.options.baseURL === "string" && provider.options.baseURL.trim()
-          ? normalizeBaseURLInput(provider.options.baseURL)
-          : undefined;
-      if (optBaseURL) return optBaseURL;
+    if (typeof provider.api === "string" && provider.api.trim()) {
+      return normalizeBaseURLInput(provider.api);
     }
-
-    // Legacy direct fields
-    const api =
-      typeof provider.api === "string" && provider.api.trim()
-        ? normalizeBaseURLInput(provider.api)
-        : undefined;
-    if (api) return api;
-
-    const baseURL =
-      typeof provider.baseURL === "string" && provider.baseURL.trim()
-        ? normalizeBaseURLInput(provider.baseURL)
-        : undefined;
-    if (baseURL) return baseURL;
   }
 
   if (persistedBaseURL && !validateBaseURL(persistedBaseURL)) {
     return normalizeBaseURLInput(persistedBaseURL);
   }
 
-  return normalizeBaseURLInput(defaultBaseURL);
+  if (defaultBaseURL && validateBaseURL(defaultBaseURL) === undefined) {
+    return normalizeBaseURLInput(defaultBaseURL);
+  }
+
+  return undefined;
 }
 
 async function fetchModels(
@@ -674,34 +923,6 @@ async function fetchModels(
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function canonicalVariant(id: string): string {
-  return id.trim().toLowerCase();
-}
-
-function modelIdVariants(id: string): string[] {
-  const normalized = canonicalVariant(id);
-  if (!normalized) {
-    return [];
-  }
-
-  const variants = new Set<string>([normalized]);
-  if (normalized.includes("/")) {
-    const slashParts = normalized.split("/");
-    if (slashParts.length >= 2) {
-      variants.add(slashParts.slice(1).join("/"));
-      variants.add(`${slashParts[0]}:${slashParts.slice(1).join("/")}`);
-    }
-  }
-  if (normalized.includes(":")) {
-    const colonParts = normalized.split(":");
-    if (colonParts.length >= 2) {
-      variants.add(colonParts.slice(1).join(":"));
-      variants.add(`${colonParts[0]}/${colonParts.slice(1).join(":")}`);
-    }
-  }
-  return [...variants];
 }
 
 function isModelsDevCatalog(payload: unknown): payload is ModelsDevCatalog {
@@ -770,271 +991,144 @@ async function fetchModelsDevCatalog(
   }
 }
 
-function buildModelsDevLookup(catalog: ModelsDevCatalog): Map<string, ModelsDevModel> {
-  const lookup = new Map<string, ModelsDevModel>();
+function buildModelsDevIndex(catalog: ModelsDevCatalog): ModelsDevIndex {
+  const exactByProvider = new Map<string, Map<string, ModelsDevModel>>();
+  const normalizedByProvider = new Map<string, Map<string, ModelsDevModel>>();
+  const exactGlobal = new Map<string, ModelsDevModel[]>();
+  const normalizedGlobal = new Map<string, ModelsDevModel[]>();
+
   for (const [providerId, provider] of Object.entries(catalog)) {
-    if (!provider.models) {
-      continue;
-    }
+    if (!provider.models) continue;
+
+    const providerExact = new Map<string, ModelsDevModel>();
+    const providerNormalized = new Map<string, ModelsDevModel>();
+
     for (const [modelId, model] of Object.entries(provider.models)) {
-      for (const variant of modelIdVariants(`${providerId}/${modelId}`)) {
-        if (!lookup.has(variant)) {
-          lookup.set(variant, model);
-        }
-      }
-      for (const variant of modelIdVariants(modelId)) {
-        if (!lookup.has(variant)) {
-          lookup.set(variant, model);
-        }
-      }
-      if (typeof model.id === "string") {
-        for (const variant of modelIdVariants(model.id)) {
-          if (!lookup.has(variant)) {
-            lookup.set(variant, model);
-          }
-        }
-      }
+      const exactKey = modelId.toLowerCase();
+      const normalizedKey = normalizeModelKey(modelId);
+
+      providerExact.set(exactKey, model);
+      providerNormalized.set(normalizedKey, model);
+
+      const globalExact = exactGlobal.get(exactKey) ?? [];
+      globalExact.push(model);
+      exactGlobal.set(exactKey, globalExact);
+
+      const globalNormalized = normalizedGlobal.get(normalizedKey) ?? [];
+      globalNormalized.push(model);
+      normalizedGlobal.set(normalizedKey, globalNormalized);
     }
+
+    exactByProvider.set(providerId.toLowerCase(), providerExact);
+    normalizedByProvider.set(providerId.toLowerCase(), providerNormalized);
   }
-  return lookup;
+
+  return {
+    exactByProvider,
+    normalizedByProvider,
+    exactGlobal,
+    normalizedGlobal
+  };
+}
+
+function singleOrUndefined<T>(values: T[] | undefined): T | undefined {
+  return values?.length === 1 ? values[0] : undefined;
 }
 
 function findEnrichedModel(
   modelId: string,
-  lookup?: Map<string, ModelsDevModel>
+  providerId: string,
+  index: ModelsDevIndex | undefined,
+  providerAliases: Record<string, string[]>
 ): ModelsDevModel | undefined {
-  if (!lookup) {
-    return undefined;
+  if (!index) return undefined;
+
+  const { providerKey, modelKey } = splitModelForLookup(modelId, providerId);
+  const aliases = resolveProviderAlias(providerKey, providerAliases);
+  const exactKey = modelKey.toLowerCase();
+  const normalizedKey = normalizeModelKey(modelKey);
+
+  for (const alias of aliases) {
+    const providerExact = index.exactByProvider.get(alias)?.get(exactKey);
+    if (providerExact) return providerExact;
+    const providerNormalized = index.normalizedByProvider.get(alias)?.get(normalizedKey);
+    if (providerNormalized) return providerNormalized;
   }
-  for (const variant of modelIdVariants(modelId)) {
-    const match = lookup.get(variant);
-    if (match) {
-      return match;
-    }
-  }
-  return undefined;
-}
 
-/**
- * Build a model entry suitable for injection into an opencode config provider.
- * The returned object matches the shape that opencode's config parser reads.
- */
-function buildConfigModelEntry(
-  upstream: UpstreamModel,
-  modelPart: string,
-  baseURL: string,
-  contextWindow: number,
-  maxOutputTokens: number,
-  enriched?: ModelsDevModel,
-  apiKey?: string
-): Record<string, unknown> {
-  const attachment = typeof enriched?.attachment === "boolean" ? enriched.attachment : false;
-  const inferredFamily = inferFamily(modelPart);
-  const reasoning =
-    typeof enriched?.reasoning === "boolean"
-      ? enriched.reasoning
-      : inferredFamily === "o1" || inferredFamily === "o3";
-  const temperature = typeof enriched?.temperature === "boolean" ? enriched.temperature : true;
-  const toolCall = typeof enriched?.tool_call === "boolean" ? enriched.tool_call : true;
-  const context =
-    typeof enriched?.limit?.context === "number" && enriched.limit.context > 0
-      ? enriched.limit.context
-      : contextWindow;
-  const output =
-    typeof enriched?.limit?.output === "number" && enriched.limit.output > 0
-      ? enriched.limit.output
-      : maxOutputTokens;
-  const releaseDate =
-    typeof enriched?.release_date === "string" && enriched.release_date.trim()
-      ? enriched.release_date
-      : toDate(upstream.created);
-  const displayName =
-    typeof enriched?.name === "string" && enriched.name.trim() ? enriched.name : modelPart;
+  const globalExact = singleOrUndefined(index.exactGlobal.get(exactKey));
+  const globalNormalized = singleOrUndefined(index.normalizedGlobal.get(normalizedKey));
 
-  const inputModalities = ["text", ...(attachment ? ["image", "pdf"] : [])];
-
-  return {
-    id: upstream.id,
-    name: displayName,
-    temperature,
-    reasoning,
-    attachment,
-    tool_call: toolCall,
-    modalities: { input: inputModalities, output: ["text"] },
-    limit: { context, output },
-    cost: { input: 0, output: 0, cache_read: 0, cache_write: 0 },
-    provider: { npm: "@ai-sdk/openai-compatible", api: baseURL },
-    status: "active",
-    release_date: releaseDate,
-    ...(apiKey ? { headers: { Authorization: `Bearer ${apiKey}` } } : {}),
-  };
+  return globalExact ?? globalNormalized;
 }
 
 export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions = {}) {
-  const {
-    providerId,
-    defaultBaseURL,
-    apiKeyEnvName,
-    defaultContextWindow,
-    defaultMaxOutputTokens,
-    modelsDevCatalogURL,
-    modelsDevTimeoutMs,
-    modelsDevCacheTtlMs,
-    includeModelIdRegex,
-    excludeModelIdRegex
-  } = {
+  const { providerId, defaultBaseURL, apiKeyEnvName } = {
     ...DEFAULT_OPTIONS,
     ...options
   };
+  const configuredEnrichmentOpts = { ...DEFAULT_MODEL_ENRICHMENT, ...(options.modelEnrichment ?? {}) };
+  const configuredFilteringOpts = options.modelFiltering ?? {};
+  const configuredProviderAliases = mergeProviderAliasRecords(
+    toProviderAliasRecord(DEFAULT_MODELS_DEV_PROVIDER_ALIASES),
+    toProviderAliasRecord(options.modelEnrichment?.providerAliases)
+  );
 
   return async (_input: PluginInput): Promise<Hooks> => {
-    // Tracks whether the config hook successfully injected sub-providers.
-    // Used by the provider.models hook to decide whether to return a flat list
-    // (fallback) or only standalone models (sub-providers active).
-    let subProvidersInjected = false;
-
     return {
-      // ------------------------------------------------------------------ //
-      // config hook — runs early, before provider models are loaded.         //
-      // Injects one virtual provider per 9Router sub-provider alias so      //
-      // OpenCode shows separate groups (e.g., "9Router - Antigravity").     //
-      // ------------------------------------------------------------------ //
-      config: async (cfg: Record<string, unknown>): Promise<void> => {
-        try {
-          // Resolve the API key: env var takes priority, then persisted settings
-          // (written by a previous provider.models run via opencode auth).
-          const settings = await readSettings(providerId);
-          const apiKey =
-            process.env[apiKeyEnvName] ||
-            (isObjectRecord(cfg?.provider) &&
-            isObjectRecord((cfg.provider as Record<string, unknown>)[providerId]) &&
-            typeof ((cfg.provider as Record<string, unknown>)[providerId] as Record<string, unknown>).key === "string"
-              ? ((cfg.provider as Record<string, unknown>)[providerId] as Record<string, unknown>).key as string
-              : "") ||
-            settings.apiKey ||
-            "";
-
-          if (!apiKey) {
-            process.stderr.write(
-              `[opencode-9router-plugin] config hook: no API key available, skipping sub-provider injection\n`
-            );
-            return;
-          }
-
-          // Resolve the base URL
-          const cfgProviderEntry =
-            isObjectRecord(cfg?.provider) &&
-            isObjectRecord((cfg.provider as Record<string, unknown>)[providerId])
-              ? ((cfg.provider as Record<string, unknown>)[providerId] as Record<string, unknown>)
-              : undefined;
-          const baseURL =
-            (typeof cfgProviderEntry?.api === "string" && cfgProviderEntry.api.trim()
-              ? normalizeBaseURLInput(cfgProviderEntry.api)
-              : undefined) ||
-            (typeof cfgProviderEntry?.baseURL === "string" && cfgProviderEntry.baseURL.trim()
-              ? normalizeBaseURLInput(cfgProviderEntry.baseURL)
-              : undefined) ||
-            settings.baseURL ||
-            defaultBaseURL;
-
-          // Fetch available models
-          const upstreamModels = await fetchModels(baseURL, apiKey);
-          if (!upstreamModels) {
-            process.stderr.write(
-              `[opencode-9router-plugin] config hook: model fetch failed, skipping sub-provider injection\n`
-            );
-            return;
-          }
-
-          // Apply include/exclude filters
-          const filtered = upstreamModels
-            .filter((m) => regexPass(includeModelIdRegex, m.id))
-            .filter((m) => !excludeModelIdRegex || !regexPass(excludeModelIdRegex, m.id));
-
-          if (filtered.length === 0) {
-            process.stderr.write(
-              `[opencode-9router-plugin] config hook: no models after filtering, skipping\n`
-            );
-            return;
-          }
-
-          // Enrich from models.dev
-          const catalog = await fetchModelsDevCatalog(
-            modelsDevCatalogURL,
-            modelsDevTimeoutMs,
-            modelsDevCacheTtlMs
-          );
-          const lookup = catalog ? buildModelsDevLookup(catalog) : undefined;
-
-          // Group models by sub-provider alias
-          const groups = new Map<string, UpstreamModel[]>();
-          for (const model of filtered) {
-            const [alias] = splitProviderAlias(model.id);
-            const group = alias ?? "_standalone";
-            const arr = groups.get(group) ?? [];
-            arr.push(model);
-            groups.set(group, arr);
-          }
-
-          // Inject one virtual provider per sub-provider alias into the config.
-          // OpenCode reads cfg.provider after all config() hooks run, so these
-          // entries will appear as regular config providers in the model picker.
-          if (!isObjectRecord(cfg.provider)) {
-            cfg.provider = {};
-          }
-          const cfgProvider = cfg.provider as Record<string, unknown>;
-
-          let injectedCount = 0;
-          for (const [alias, models] of groups) {
-            if (alias === "_standalone") {
-              // Standalone models (no prefix) are handled by the provider.models hook
-              continue;
-            }
-            const subId = `${providerId}-${alias}`;
-            const subName = `9Router - ${providerDisplayName(alias)}`;
-
-            const modelConfigs: Record<string, unknown> = {};
-            for (const model of models) {
-              const [, modelPart] = splitProviderAlias(model.id);
-              const enriched = findEnrichedModel(model.id, lookup);
-              modelConfigs[model.id] = buildConfigModelEntry(
-                model,
-                modelPart,
-                baseURL,
-                defaultContextWindow,
-                defaultMaxOutputTokens,
-                enriched,
-                apiKey
-              );
-            }
-
-            cfgProvider[subId] = {
-              name: subName,
-              env: [apiKeyEnvName],
-              key: apiKey,
-              models: modelConfigs,
-            };
-            injectedCount++;
-          }
-
-          subProvidersInjected = injectedCount > 0;
-          process.stderr.write(
-            `[opencode-9router-plugin] config hook: injected ${injectedCount} sub-provider(s) ` +
-              `(${filtered.length} total model(s))\n`
-          );
-        } catch (err) {
-          process.stderr.write(
-            `[opencode-9router-plugin] config hook error (will fall back to flat list): ${String(err)}\n`
-          );
-        }
-      },
-
       provider: {
         id: providerId,
         models: async (
           provider: ProviderConfig,
           context?: { auth?: { type?: string; key?: string } }
         ): Promise<Record<string, OpenCodeModel>> => {
+          const providerOptions = isObjectRecord(provider.options) ? provider.options : undefined;
+          const providerEnrichment = isObjectRecord(providerOptions?.modelEnrichment)
+            ? providerOptions.modelEnrichment
+            : undefined;
+          const providerFiltering = isObjectRecord(providerOptions?.modelFiltering)
+            ? providerOptions.modelFiltering
+            : undefined;
+          const timeoutMs = toStrictlyPositiveNumber(providerEnrichment?.timeoutMs);
+          const cacheTtlMs = toStrictlyPositiveNumber(providerEnrichment?.cacheTtlMs);
+          const defaultContextWindow = toStrictlyPositiveNumber(providerEnrichment?.defaultContextWindow);
+          const defaultMaxOutputTokens = toStrictlyPositiveNumber(providerEnrichment?.defaultMaxOutputTokens);
+
+          const runtimeEnrichmentOpts = {
+            ...configuredEnrichmentOpts,
+            ...(typeof providerEnrichment?.enabled === "boolean" ? { enabled: providerEnrichment.enabled } : {}),
+            ...(typeof providerEnrichment?.catalogURL === "string" && providerEnrichment.catalogURL.trim()
+              ? { catalogURL: providerEnrichment.catalogURL }
+              : {}),
+            ...(timeoutMs !== undefined
+              ? { timeoutMs }
+              : {}),
+            ...(cacheTtlMs !== undefined
+              ? { cacheTtlMs }
+              : {}),
+            ...(typeof providerEnrichment?.overrideUpstream === "boolean"
+              ? { overrideUpstream: providerEnrichment.overrideUpstream }
+              : {}),
+            ...(defaultContextWindow !== undefined
+              ? { defaultContextWindow }
+              : {}),
+            ...(defaultMaxOutputTokens !== undefined
+              ? { defaultMaxOutputTokens }
+              : {})
+          };
+          const runtimeProviderAliases = mergeProviderAliasRecords(
+            configuredProviderAliases,
+            toProviderAliasRecord(providerEnrichment?.providerAliases)
+          );
+          const runtimeFilteringOpts = {
+            includePrefixes: toStringArray(providerFiltering?.includePrefixes) ?? configuredFilteringOpts.includePrefixes,
+            excludePrefixes: toStringArray(providerFiltering?.excludePrefixes) ?? configuredFilteringOpts.excludePrefixes,
+            includeModelIdRegex: toRegex(providerFiltering?.includeModelIdRegex) ?? configuredFilteringOpts.includeModelIdRegex,
+            excludeModelIdRegex: toRegex(providerFiltering?.excludeModelIdRegex) ?? configuredFilteringOpts.excludeModelIdRegex
+          };
+          const normalizedIncludePrefixes = runtimeFilteringOpts.includePrefixes?.map((p) => p.toLowerCase());
+          const normalizedExcludePrefixes = runtimeFilteringOpts.excludePrefixes?.map((p) => p.toLowerCase());
+          const enrichmentEnabled = runtimeEnrichmentOpts.enabled !== false;
+
           const staticModels = provider.models ?? {};
           const settings = await readSettings(providerId);
           // Probe several places where opencode may surface the API key:
@@ -1049,70 +1143,27 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           const apiKey =
             pickApiKey(process.env[apiKeyEnvName], context?.auth, provider.key) || optionsApiKey || "";
 
-          // Persist the resolved API key so the config hook can use it on the
-          // next startup when the key comes from opencode's auth system (not env var).
+          // Persist the resolved API key so subsequent runs can reuse it when
+          // the key comes from opencode's auth system (not env var).
           if (apiKey && apiKey !== settings.apiKey) {
             await writeSettings(providerId, { ...settings, apiKey }).catch(() => undefined);
           }
 
           const baseURL = pickBaseURL(provider, defaultBaseURL, settings.baseURL);
-
-          // When sub-providers have been injected by the config hook each named
-          // sub-provider manages its own model group.  The provider.models hook
-          // only needs to return models that have NO alias prefix (standalone).
-          // If there are none, returning {} causes this provider group to be
-          // hidden automatically by opencode (empty providers are pruned).
-          if (subProvidersInjected) {
-            const upstreamModels = await fetchModels(baseURL, apiKey);
-            const modelsDevCatalog = await fetchModelsDevCatalog(
-              modelsDevCatalogURL,
-              modelsDevTimeoutMs,
-              modelsDevCacheTtlMs
-            );
-            const modelsDevLookup = modelsDevCatalog ? buildModelsDevLookup(modelsDevCatalog) : undefined;
-
-            const standaloneModels: Record<string, OpenCodeModel> = {};
-            if (upstreamModels) {
-              for (const model of upstreamModels) {
-                const [alias] = splitProviderAlias(model.id);
-                if (alias) continue; // handled by sub-provider
-                if (!regexPass(includeModelIdRegex, model.id)) continue;
-                if (excludeModelIdRegex && regexPass(excludeModelIdRegex, model.id)) continue;
-                const enriched = findEnrichedModel(model.id, modelsDevLookup);
-                standaloneModels[model.id] = toOpenCodeModel(
-                  model,
-                  providerId,
-                  baseURL,
-                  defaultContextWindow,
-                  defaultMaxOutputTokens,
-                  enriched,
-                  apiKey
-                );
-              }
-            }
-            // Also include any explicitly configured static standalone models
-            for (const [id, m] of Object.entries(staticModels)) {
-              const [alias] = splitProviderAlias(id);
-              if (!alias) standaloneModels[id] = m;
-            }
+          if (!baseURL) {
             process.stderr.write(
-              `[opencode-9router-plugin] models hook (sub-providers active): ` +
-                `${Object.keys(standaloneModels).length} standalone model(s)\n`
+              `[opencode-9router-plugin] models hook: no baseURL configured, returning ${Object.keys(staticModels).length} static model(s)\n`
             );
-            return standaloneModels;
+            return staticModels;
           }
-
-          // ----------------------------------------------------------------
-          // Fallback: config hook did not inject sub-providers (no API key at
-          // config time, or API was unreachable).  Return all models as a flat
-          // list under the main provider group.
-          // ----------------------------------------------------------------
-          const modelsDevCatalog = await fetchModelsDevCatalog(
-            modelsDevCatalogURL,
-            modelsDevTimeoutMs,
-            modelsDevCacheTtlMs
-          );
-          const modelsDevLookup = modelsDevCatalog ? buildModelsDevLookup(modelsDevCatalog) : undefined;
+          const modelsDevCatalog = enrichmentEnabled
+            ? await fetchModelsDevCatalog(
+              runtimeEnrichmentOpts.catalogURL,
+              runtimeEnrichmentOpts.timeoutMs,
+              runtimeEnrichmentOpts.cacheTtlMs
+            )
+            : undefined;
+          const modelsDevIndex = modelsDevCatalog ? buildModelsDevIndex(modelsDevCatalog) : undefined;
 
           const upstreamModels = await fetchModels(baseURL, apiKey);
           if (!upstreamModels) {
@@ -1127,18 +1178,29 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           );
 
           const dynamicModels = upstreamModels
-            .filter((model) => regexPass(includeModelIdRegex, model.id))
-            .filter((model) => !excludeModelIdRegex || !regexPass(excludeModelIdRegex, model.id))
+            .filter((model) => {
+              const { modelKey } = splitModelForLookup(model.id, providerId);
+              const includePass = regexPass(runtimeFilteringOpts.includeModelIdRegex, model.id)
+                || regexPass(runtimeFilteringOpts.includeModelIdRegex, modelKey);
+              const excludePass = !runtimeFilteringOpts.excludeModelIdRegex
+                || (!regexPass(runtimeFilteringOpts.excludeModelIdRegex, model.id)
+                  && !regexPass(runtimeFilteringOpts.excludeModelIdRegex, modelKey));
+              return includePass
+                && excludePass
+                && prefixPass(normalizedIncludePrefixes, model.id, providerId)
+                && prefixExcludePass(normalizedExcludePrefixes, model.id, providerId);
+            })
             .reduce<Record<string, OpenCodeModel>>((acc, model) => {
-              const enriched = findEnrichedModel(model.id, modelsDevLookup);
+              const enriched = findEnrichedModel(model.id, providerId, modelsDevIndex, runtimeProviderAliases);
               acc[model.id] = toOpenCodeModel(
                 model,
                 providerId,
                 baseURL,
-                defaultContextWindow,
-                defaultMaxOutputTokens,
+                runtimeEnrichmentOpts.defaultContextWindow,
+                runtimeEnrichmentOpts.defaultMaxOutputTokens,
                 enriched,
-                apiKey
+                apiKey,
+                runtimeEnrichmentOpts.overrideUpstream
               );
               return acc;
             }, {});
@@ -1172,25 +1234,39 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
                 type: "text",
                 key: "baseURL",
                 message: "Enter your 9Router base URL",
-                placeholder: defaultBaseURL,
+                ...(defaultBaseURL ? { placeholder: defaultBaseURL } : {}),
                 validate: validateBaseURL
               }
             ],
             authorize: async (inputs = {}) => {
-              const baseURLInput = typeof inputs.baseURL === "string" ? inputs.baseURL : defaultBaseURL;
-              const error = validateBaseURL(baseURLInput);
-              if (!error) {
-                await writeSettings(providerId, { baseURL: normalizeBaseURLInput(baseURLInput) });
+              const settings = await readSettings(providerId);
+              const fallbackBaseURL = pickBaseURL(undefined, defaultBaseURL, settings.baseURL);
+              const baseURLInput = typeof inputs.baseURL === "string" ? inputs.baseURL : (fallbackBaseURL ?? "");
+              const baseURLError = validateBaseURL(baseURLInput);
+              if (baseURLError) {
+                if (!fallbackBaseURL) {
+                  process.stderr.write(
+                    `[opencode-9router-plugin] authorize: invalid baseURL provided (${baseURLError}), and no fallback baseURL is configured\n`
+                  );
+                  return { type: "failed" };
+                }
+                process.stderr.write(
+                  `[opencode-9router-plugin] authorize: invalid baseURL provided (${baseURLError}), using fallback (${fallbackBaseURL})\n`
+                );
               }
+              const normalizedBaseURL = baseURLError && fallbackBaseURL
+                ? normalizeBaseURLInput(fallbackBaseURL)
+                : normalizeBaseURLInput(baseURLInput);
+              const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
+              // Persist settings so subsequent runs can reuse them.
+              await writeSettings(providerId, { baseURL: normalizedBaseURL, ...(apiKey ? { apiKey } : {}) }).catch((err) => {
+                process.stderr.write(`[opencode-9router-plugin] authorize: failed to persist settings: ${String(err)}\n`);
+              });
               // Ensure opencode.json has this provider listed so opencode will
               // call the provider.models hook. Without this entry opencode never
-              // invokes the hook and no models are discovered.
-              await ensureProviderInOpenCodeConfig(providerId);
-              // Only return the key if opencode explicitly passed it in inputs.
-              // If inputs.key is absent/empty, do NOT return an empty key — that
-              // would overwrite the API key that opencode already stored in auth.json
-              // before invoking this authorize callback.
-              const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
+              // invokes the hook and no models are discovered. Storing baseURL+key
+              // lets the /connect screen show the provider as fully configured.
+              await ensureProviderInOpenCodeConfig(providerId, { api: normalizedBaseURL, ...(apiKey ? { key: apiKey } : {}) });
               return apiKey !== undefined ? { type: "success", key: apiKey } : { type: "success" };
             }
           }
