@@ -6,11 +6,16 @@ It auto-discovers models from `GET /v1/models`, maps them to OpenCode `provider.
 
 ## Install and use in OpenCode
 
-1) Add plugin to your OpenCode config (`~/.config/opencode/opencode.json`):
+1) Add plugin and API URL to your OpenCode config (`~/.config/opencode/opencode.json`):
 
 ```json
 {
-  "plugin": ["@dendaio/opencode-9router-plugin"]
+  "plugin": ["@dendaio/opencode-9router-plugin"],
+  "provider": {
+    "9router": {
+      "api": "https://your-gateway.example/v1"
+    }
+  }
 }
 ```
 
@@ -28,7 +33,6 @@ or inside OpenCode:
 
 During login, OpenCode asks for:
 - API key
-- Base URL (for example `https://your-gateway.example/v1`)
 
 3) Restart OpenCode, then verify:
 
@@ -42,13 +46,15 @@ You should see models under provider `9router`.
 
 OpenCode only calls `provider.models` for providers present in the `provider` section (singular key: `"provider"`).
 
-This plugin auto-registers the provider during login. If needed, add it manually:
+This plugin auto-registers the provider key during login. Ensure `provider.9router.api` is set:
 
 ```json
 {
   "plugin": ["@dendaio/opencode-9router-plugin"],
   "provider": {
-    "9router": {}
+    "9router": {
+      "api": "https://your-gateway.example/v1"
+    }
   }
 }
 ```
@@ -203,8 +209,8 @@ OPENCODE_LOG=debug opencode
 ## Troubleshooting
 
 - **401 Unauthorized**: check `ROUTER9_API_KEY` (or your configured key source) and gateway auth requirements.
-- **404 Not Found**: check `baseURL`; plugin calls `{baseURL}/models` if URL ends with `/v1`, otherwise `{baseURL}/v1/models`.
-- **No discovered models**: plugin keeps static fallback models when fetch fails, schema is invalid, or baseURL is missing.
+- **404 Not Found**: check `provider.9router.api` in `opencode.json`; plugin calls `{api}/models` if URL ends with `/v1`, otherwise `{api}/v1/models`.
+- **No discovered models**: plugin keeps static fallback models when fetch fails, schema is invalid, or `provider.9router.api` is missing.
 
 ## License
 
