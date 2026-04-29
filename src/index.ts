@@ -37,7 +37,6 @@ export interface ModelFilteringOptions {
 
 export interface RouterPluginOptions {
   providerId?: string;
-  defaultBaseURL?: string;
   apiKeyEnvName?: string;
   /** models.dev enrichment configuration. */
   modelEnrichment?: ModelEnrichmentOptions;
@@ -231,11 +230,6 @@ const DEFAULT_OPTIONS = {
   apiKeyEnvName: "ROUTER9_API_KEY"
 };
 
-type PluginSettings = {
-  baseURL?: string;
-  apiKey?: string;
-};
-
 type ModelsDevCache = {
   url: string;
   expiresAt: number;
@@ -268,8 +262,8 @@ const DEFAULT_MODELS_DEV_PROVIDER_ALIASES: Record<string, string | string[]> = {
   cohere: "cohere"
 };
 
-function normalizeModelsURL(baseURL: string): string {
-  let clean = baseURL;
+function normalizeModelsURL(apiURL: string): string {
+  let clean = apiURL;
   while (clean.endsWith("/")) {
     clean = clean.slice(0, -1);
   }
@@ -486,7 +480,7 @@ function resolveProviderAlias(
 function toOpenCodeModel(
   upstream: UpstreamModel,
   providerId: string,
-  baseURL: string,
+  apiURL: string,
   contextWindow: number,
   maxOutputTokens: number,
   enriched?: ModelsDevModel,
@@ -592,7 +586,7 @@ function toOpenCodeModel(
     release_date: releaseDate,
     api: {
       id: upstream.id,
-      url: baseURL,
+      url: apiURL,
       npm: "@ai-sdk/openai-compatible"
     },
     capabilities: {
@@ -659,7 +653,7 @@ function prefixExcludePass(excludePrefixes: string[] | undefined, modelId: strin
   return !excludePrefixes.includes(normalized);
 }
 
-function normalizeBaseURLInput(value: string): string {
+function normalizeApiURLInput(value: string): string {
   let out = value.trim();
   while (out.endsWith("/")) {
     out = out.slice(0, -1);
@@ -667,19 +661,19 @@ function normalizeBaseURLInput(value: string): string {
   return out;
 }
 
-function validateBaseURL(value: string): string | undefined {
-  const normalized = normalizeBaseURLInput(value);
+function validateApiURL(value: string): string | undefined {
+  const normalized = normalizeApiURLInput(value);
   if (!normalized) {
-    return "Base URL is required";
+    return "API URL is required";
   }
 
   try {
     const url = new URL(normalized);
     if (url.protocol !== "http:" && url.protocol !== "https:") {
-      return "Base URL must use http or https";
+      return "API URL must use http or https";
     }
   } catch {
-    return "Base URL is invalid";
+    return "API URL is invalid";
   }
 
   return undefined;
@@ -708,16 +702,27 @@ function openCodeConfigDir(): string {
   return path.join(configBase, "opencode");
 }
 
-function settingsFilePath(providerId: string): string {
-  return path.join(openCodeConfigDir(), `opencode-9router-plugin.${providerId}.json`);
-}
-
 function openCodeConfigPath(): string {
   // Honor the same env var that opencode itself uses to override the config
   // file location (e.g. OPENCODE_CONFIG=/path/to/custom.json opencode …).
   const envOverride = process.env.OPENCODE_CONFIG;
   if (envOverride && path.isAbsolute(envOverride)) return envOverride;
   return path.join(openCodeConfigDir(), "opencode.json");
+}
+
+async function readProviderFromOpenCodeConfig(providerId: string): Promise<ProviderConfig | undefined> {
+  const file = openCodeConfigPath();
+  try {
+    const raw = await readFile(file, "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isObjectRecord(parsed)) return undefined;
+    if (!isObjectRecord(parsed.provider)) return undefined;
+    const provider = parsed.provider[providerId];
+    if (!isObjectRecord(provider)) return undefined;
+    return provider as ProviderConfig;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -770,9 +775,9 @@ async function ensureProviderInOpenCodeConfig(
     changed = true;
   }
 
-  if (isObjectRecord(updated.options) && "baseURL" in updated.options) {
+  if (isObjectRecord(updated.options) && "apiURL" in updated.options) {
     const cleanedOptions = { ...updated.options };
-    delete cleanedOptions.baseURL;
+    delete cleanedOptions.apiURL;
     if (Object.keys(cleanedOptions).length > 0) {
       updated.options = cleanedOptions;
     } else {
@@ -780,8 +785,8 @@ async function ensureProviderInOpenCodeConfig(
     }
     changed = true;
   }
-  if ("baseURL" in updated) {
-    delete updated.baseURL;
+  if ("apiURL" in updated) {
+    delete updated.apiURL;
     changed = true;
   }
 
@@ -798,31 +803,6 @@ async function ensureProviderInOpenCodeConfig(
   process.stderr.write(
     `[opencode-9router-plugin] registered "${providerId}" in ${file} — restart opencode to load models\n`
   );
-}
-
-async function readSettings(providerId: string): Promise<PluginSettings> {
-  const file = settingsFilePath(providerId);
-  try {
-    const raw = await readFile(file, "utf8");
-    const parsed = JSON.parse(raw) as PluginSettings;
-    if (!parsed || typeof parsed !== "object") {
-      return {};
-    }
-    return parsed;
-  } catch {
-    return {};
-  }
-}
-
-async function writeSettings(providerId: string, patch: PluginSettings): Promise<void> {
-  const file = settingsFilePath(providerId);
-  await mkdir(path.dirname(file), { recursive: true });
-  const current = await readSettings(providerId);
-  const next = {
-    ...current,
-    ...patch
-  };
-  await writeFile(file, `${JSON.stringify(next, null, 2)}\n`, "utf8");
 }
 
 function pickApiKey(
@@ -844,33 +824,24 @@ function pickApiKey(
   return "";
 }
 
-function pickBaseURL(
+function pickApiURL(
   provider: ProviderConfig | undefined,
-  defaultBaseURL: string | undefined,
-  persistedBaseURL?: string
+  configProvider: ProviderConfig | undefined
 ): string | undefined {
-  if (provider) {
-    if (typeof provider.api === "string" && provider.api.trim()) {
-      return normalizeBaseURLInput(provider.api);
-    }
+  if (provider && typeof provider.api === "string" && provider.api.trim()) {
+    return normalizeApiURLInput(provider.api);
   }
-
-  if (persistedBaseURL && !validateBaseURL(persistedBaseURL)) {
-    return normalizeBaseURLInput(persistedBaseURL);
+  if (configProvider && typeof configProvider.api === "string" && configProvider.api.trim()) {
+    return normalizeApiURLInput(configProvider.api);
   }
-
-  if (defaultBaseURL && validateBaseURL(defaultBaseURL) === undefined) {
-    return normalizeBaseURLInput(defaultBaseURL);
-  }
-
   return undefined;
 }
 
 async function fetchModels(
-  baseURL: string,
+  apiURL: string,
   apiKey: string
 ): Promise<UpstreamModel[] | null> {
-  const url = normalizeModelsURL(baseURL);
+  const url = normalizeModelsURL(apiURL);
   const keyLabel = apiKey ? `${apiKey.slice(0, 8)}…` : "(none → using anonymous)";
 
   process.stderr.write(
@@ -1062,7 +1033,7 @@ function findEnrichedModel(
 }
 
 export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions = {}) {
-  const { providerId, defaultBaseURL, apiKeyEnvName } = {
+  const { providerId, apiKeyEnvName } = {
     ...DEFAULT_OPTIONS,
     ...options
   };
@@ -1081,6 +1052,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           provider: ProviderConfig,
           context?: { auth?: { type?: string; key?: string } }
         ): Promise<Record<string, OpenCodeModel>> => {
+          const configProvider = await readProviderFromOpenCodeConfig(providerId);
           const providerOptions = isObjectRecord(provider.options) ? provider.options : undefined;
           const providerEnrichment = isObjectRecord(providerOptions?.modelEnrichment)
             ? providerOptions.modelEnrichment
@@ -1130,7 +1102,6 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           const enrichmentEnabled = runtimeEnrichmentOpts.enabled !== false;
 
           const staticModels = provider.models ?? {};
-          const settings = await readSettings(providerId);
           // Probe several places where opencode may surface the API key:
           //  1. env var
           //  2. context.auth.key (from auth.json, regardless of type field)
@@ -1142,17 +1113,10 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
               : undefined;
           const apiKey =
             pickApiKey(process.env[apiKeyEnvName], context?.auth, provider.key) || optionsApiKey || "";
-
-          // Persist the resolved API key so subsequent runs can reuse it when
-          // the key comes from opencode's auth system (not env var).
-          if (apiKey && apiKey !== settings.apiKey) {
-            await writeSettings(providerId, { ...settings, apiKey }).catch(() => undefined);
-          }
-
-          const baseURL = pickBaseURL(provider, defaultBaseURL, settings.baseURL);
-          if (!baseURL) {
+          const apiURL = pickApiURL(provider, configProvider);
+          if (!apiURL || validateApiURL(apiURL) !== undefined) {
             process.stderr.write(
-              `[opencode-9router-plugin] models hook: no baseURL configured, returning ${Object.keys(staticModels).length} static model(s)\n`
+              `[opencode-9router-plugin] models hook: no API URL configured, returning ${Object.keys(staticModels).length} static model(s)\n`
             );
             return staticModels;
           }
@@ -1165,7 +1129,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             : undefined;
           const modelsDevIndex = modelsDevCatalog ? buildModelsDevIndex(modelsDevCatalog) : undefined;
 
-          const upstreamModels = await fetchModels(baseURL, apiKey);
+          const upstreamModels = await fetchModels(apiURL, apiKey);
           if (!upstreamModels) {
             process.stderr.write(
               `[opencode-9router-plugin] models hook: fetch failed, returning ${Object.keys(staticModels).length} static model(s)\n`
@@ -1195,7 +1159,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
               acc[model.id] = toOpenCodeModel(
                 model,
                 providerId,
-                baseURL,
+                apiURL,
                 runtimeEnrichmentOpts.defaultContextWindow,
                 runtimeEnrichmentOpts.defaultMaxOutputTokens,
                 enriched,
@@ -1219,54 +1183,23 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
         provider: providerId,
         loader: async (getAuth, provider) => {
           const auth = await getAuth().catch(() => undefined);
-          const settings = await readSettings(providerId);
+          const configProvider = await readProviderFromOpenCodeConfig(providerId);
           return {
             apiKey: pickApiKey(process.env[apiKeyEnvName], auth, (provider as ProviderConfig | undefined)?.key),
-            baseURL: pickBaseURL(provider as ProviderConfig | undefined, defaultBaseURL, settings.baseURL)
+            api: pickApiURL(provider as ProviderConfig | undefined, configProvider)
           };
         },
         methods: [
           {
             type: "api",
             label: "Login with 9Router API key",
-            prompts: [
-              {
-                type: "text",
-                key: "baseURL",
-                message: "Enter your 9Router base URL",
-                ...(defaultBaseURL ? { placeholder: defaultBaseURL } : {}),
-                validate: validateBaseURL
-              }
-            ],
             authorize: async (inputs = {}) => {
-              const settings = await readSettings(providerId);
-              const fallbackBaseURL = pickBaseURL(undefined, defaultBaseURL, settings.baseURL);
-              const baseURLInput = typeof inputs.baseURL === "string" ? inputs.baseURL : (fallbackBaseURL ?? "");
-              const baseURLError = validateBaseURL(baseURLInput);
-              if (baseURLError) {
-                if (!fallbackBaseURL) {
-                  process.stderr.write(
-                    `[opencode-9router-plugin] authorize: invalid baseURL provided (${baseURLError}), and no fallback baseURL is configured\n`
-                  );
-                  return { type: "failed" };
-                }
-                process.stderr.write(
-                  `[opencode-9router-plugin] authorize: invalid baseURL provided (${baseURLError}), using fallback (${fallbackBaseURL})\n`
-                );
-              }
-              const normalizedBaseURL = baseURLError && fallbackBaseURL
-                ? normalizeBaseURLInput(fallbackBaseURL)
-                : normalizeBaseURLInput(baseURLInput);
               const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
-              // Persist settings so subsequent runs can reuse them.
-              await writeSettings(providerId, { baseURL: normalizedBaseURL, ...(apiKey ? { apiKey } : {}) }).catch((err) => {
-                process.stderr.write(`[opencode-9router-plugin] authorize: failed to persist settings: ${String(err)}\n`);
-              });
               // Ensure opencode.json has this provider listed so opencode will
               // call the provider.models hook. Without this entry opencode never
-              // invokes the hook and no models are discovered. Storing baseURL+key
-              // lets the /connect screen show the provider as fully configured.
-              await ensureProviderInOpenCodeConfig(providerId, { api: normalizedBaseURL, ...(apiKey ? { key: apiKey } : {}) });
+              // invokes the hook and no models are discovered.
+              // When auth succeeds, persist only key into opencode.json.
+              await ensureProviderInOpenCodeConfig(providerId, { ...(apiKey ? { key: apiKey } : {}) });
               return apiKey !== undefined ? { type: "success", key: apiKey } : { type: "success" };
             }
           }

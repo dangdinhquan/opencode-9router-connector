@@ -28,7 +28,6 @@ or inside OpenCode:
 
 During login, OpenCode asks for:
 - API key
-- Base URL (for example `https://your-gateway.example/v1`)
 
 3) Restart OpenCode, then verify:
 
@@ -203,8 +202,8 @@ OPENCODE_LOG=debug opencode
 ## Troubleshooting
 
 - **401 Unauthorized**: check `ROUTER9_API_KEY` (or your configured key source) and gateway auth requirements.
-- **404 Not Found**: check `baseURL`; plugin calls `{baseURL}/models` if URL ends with `/v1`, otherwise `{baseURL}/v1/models`.
-- **No discovered models**: plugin keeps static fallback models when fetch fails, schema is invalid, or baseURL is missing.
+- **404 Not Found**: check `provider.9router.api` in `opencode.json`; plugin calls `{api}/models` if URL ends with `/v1`, otherwise `{api}/v1/models`.
+- **No discovered models**: plugin keeps static fallback models when fetch fails, schema is invalid, or `provider.9router.api` is missing.
 
 ## License
 
