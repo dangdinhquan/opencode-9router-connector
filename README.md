@@ -153,7 +153,7 @@ You can change the env var name with `apiKeyEnvName` in plugin options.
           "includePrefixes": ["gh", "cx", "cc"],
           "excludePrefixes": ["ag"],
           // Regex matches either full id (`gh/gpt-5.2`) or model key (`gpt-5.2`);
-          // in JSON config, use string pattern ("^(gpt|o\\d)") or slash form ("/^(gpt|o\\d)/i")
+          // in JSON config, prefer slash form for readability (e.g. "/^(gpt|o\\d)/i")
           "includeModelIdRegex": "/^(gpt|o\\d)/i",
           "excludeModelIdRegex": "/audio|embedding/i"
         }
