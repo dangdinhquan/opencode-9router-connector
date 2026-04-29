@@ -125,6 +125,7 @@ You can change the env var name with `apiKeyEnvName` in plugin options.
 ## OpenCode config sample (`~/.config/opencode/opencode.json`)
 
 > The provider key must match the plugin `providerId` (default: `9router`).
+> Use a single canonical config style: set base URL at `provider.<id>.options.baseURL`.
 
 ```jsonc
 {
@@ -178,7 +179,7 @@ You can change the env var name with `apiKeyEnvName` in plugin options.
 ## Usage
 
 ```ts
-import plugin, { createOpenAICompatibleModelsPlugin } from "opencode-9router-plugin";
+import plugin, { createOpenAICompatibleModelsPlugin } from "@dendaio/opencode-9router-plugin";
 
 // Use default instance
 export default {
@@ -228,9 +229,8 @@ The base URL is persisted to:
 At runtime, base URL resolution order is:
 
 1. `provider.options.baseURL`
-2. `provider.baseURL` (legacy compatibility)
-3. persisted base URL from login prompt
-4. `defaultBaseURL` plugin option (optional fallback)
+2. persisted base URL from login prompt
+3. `defaultBaseURL` plugin option (optional fallback)
 
 If none is configured, dynamic discovery is skipped and static `provider.models` is returned.
 

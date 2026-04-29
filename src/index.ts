@@ -96,7 +96,6 @@ export interface OpenCodeModel {
 }
 
 export interface ProviderConfig {
-  baseURL?: string;
   key?: string;
   options?: Record<string, unknown>;
   models?: Record<string, OpenCodeModel>;
@@ -730,8 +729,8 @@ function openCodeConfigPath(): string {
  * Without this entry the models hook is silently skipped regardless of whether
  * the user has valid credentials.
  *
- * Storing `baseURL` and `key` in the provider entry also lets opencode's /connect
- * screen show the provider as properly configured.
+ * Storing `options.baseURL` and `key` in the provider entry also lets opencode's
+ * /connect screen show the provider as properly configured.
  */
 async function ensureProviderInOpenCodeConfig(
   providerId: string,
@@ -759,15 +758,33 @@ async function ensureProviderInOpenCodeConfig(
     isObjectRecord(providerObj[providerId]) ? (providerObj[providerId] as Record<string, unknown>) : {};
 
   const updated: Record<string, unknown> = { ...existing };
-  if (patch.baseURL) updated.baseURL = patch.baseURL;
-  if (patch.key) updated.key = patch.key;
+  const updatedOptions: Record<string, unknown> = isObjectRecord(existing.options)
+    ? { ...existing.options }
+    : {};
+  let changed = false;
+
+  if (patch.baseURL && updatedOptions.baseURL !== patch.baseURL) {
+    updatedOptions.baseURL = patch.baseURL;
+    changed = true;
+  }
+  if (patch.key && updated.key !== patch.key) {
+    updated.key = patch.key;
+    changed = true;
+  }
+  if ("baseURL" in updated) {
+    delete updated.baseURL;
+    changed = true;
+  }
+
+  if (Object.keys(updatedOptions).length > 0) {
+    updated.options = updatedOptions;
+  } else if ("options" in updated) {
+    delete updated.options;
+    changed = true;
+  }
 
   // Skip the write if nothing has changed.
-  if (
-    typeof providerObj[providerId] !== "undefined" &&
-    updated.baseURL === existing.baseURL &&
-    updated.key === existing.key
-  ) {
+  if (typeof providerObj[providerId] !== "undefined" && !changed) {
     return;
   }
 
@@ -831,7 +848,6 @@ function pickBaseURL(
   persistedBaseURL?: string
 ): string | undefined {
   if (provider) {
-    // Preferred format: baseURL stored under provider.options.
     if (isObjectRecord(provider.options)) {
       const optBaseURL =
         typeof provider.options.baseURL === "string" && provider.options.baseURL.trim()
@@ -839,13 +855,6 @@ function pickBaseURL(
           : undefined;
       if (optBaseURL) return optBaseURL;
     }
-
-    // Legacy direct field.
-    const baseURL =
-      typeof provider.baseURL === "string" && provider.baseURL.trim()
-        ? normalizeBaseURLInput(provider.baseURL)
-        : undefined;
-    if (baseURL) return baseURL;
   }
 
   if (persistedBaseURL && !validateBaseURL(persistedBaseURL)) {
