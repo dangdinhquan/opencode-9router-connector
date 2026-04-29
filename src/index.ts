@@ -1123,7 +1123,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           const apiURLError = validateApiURL(apiURL);
           if (apiURLError !== undefined) {
             process.stderr.write(
-              `[opencode-9router-plugin] models hook: no API URL configured, returning ${Object.keys(staticModels).length} static model(s)\n`
+              `[opencode-9router-plugin] models hook: invalid API URL (${apiURLError}), returning ${Object.keys(staticModels).length} static model(s)\n`
             );
             return staticModels;
           }
