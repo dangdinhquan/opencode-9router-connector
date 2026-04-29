@@ -1114,7 +1114,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           const apiKey =
             pickApiKey(process.env[apiKeyEnvName], context?.auth, provider.key) || optionsApiKey || "";
           const apiURL = pickApiURL(provider, configProvider);
-          if (!apiURL || validateApiURL(apiURL) !== undefined) {
+          if (!apiURL || validateApiURL(apiURL)) {
             process.stderr.write(
               `[opencode-9router-plugin] models hook: no API URL configured, returning ${Object.keys(staticModels).length} static model(s)\n`
             );
@@ -1194,6 +1194,8 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
             type: "api",
             label: "Login with 9Router API key",
             authorize: async (inputs = {}) => {
+              // Ignore non-key auth payload fields intentionally.
+              // API URL is sourced from provider.<id>.api in opencode.json.
               const apiKey = typeof inputs.key === "string" && inputs.key ? inputs.key : undefined;
               // Ensure opencode.json has this provider listed so opencode will
               // call the provider.models hook. Without this entry opencode never

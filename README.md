@@ -6,11 +6,16 @@ It auto-discovers models from `GET /v1/models`, maps them to OpenCode `provider.
 
 ## Install and use in OpenCode
 
-1) Add plugin to your OpenCode config (`~/.config/opencode/opencode.json`):
+1) Add plugin and API URL to your OpenCode config (`~/.config/opencode/opencode.json`):
 
 ```json
 {
-  "plugin": ["@dendaio/opencode-9router-plugin"]
+  "plugin": ["@dendaio/opencode-9router-plugin"],
+  "provider": {
+    "9router": {
+      "api": "https://your-gateway.example/v1"
+    }
+  }
 }
 ```
 
@@ -41,13 +46,15 @@ You should see models under provider `9router`.
 
 OpenCode only calls `provider.models` for providers present in the `provider` section (singular key: `"provider"`).
 
-This plugin auto-registers the provider during login. If needed, add it manually:
+This plugin auto-registers the provider key during login. Ensure `provider.9router.api` is set:
 
 ```json
 {
   "plugin": ["@dendaio/opencode-9router-plugin"],
   "provider": {
-    "9router": {}
+    "9router": {
+      "api": "https://your-gateway.example/v1"
+    }
   }
 }
 ```
