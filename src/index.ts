@@ -740,6 +740,60 @@ function openCodeConfigPath(): string {
   return path.join(openCodeConfigDir(), "opencode.json");
 }
 
+/**
+ * Resolve opencode data dir (where auth.json is stored).
+ * Mirrors opencode's xdgData-based behavior:
+ *  - Linux / other: $XDG_DATA_HOME/opencode (fallback ~/.local/share/opencode)
+ *  - macOS:         ~/Library/Application Support/opencode
+ *  - Windows:       %APPDATA%\\opencode
+ */
+function openCodeDataDir(): string {
+  const home = os.homedir();
+  if (process.platform === "darwin") {
+    return path.join(home, "Library", "Application Support", "opencode");
+  }
+  if (process.platform === "win32") {
+    const appData = process.env.APPDATA;
+    if (appData) return path.join(appData, "opencode");
+    return path.join(home, "AppData", "Roaming", "opencode");
+  }
+  const xdg = process.env.XDG_DATA_HOME;
+  const dataBase = xdg && path.isAbsolute(xdg) ? xdg : path.join(home, ".local", "share");
+  return path.join(dataBase, "opencode");
+}
+
+function openCodeAuthPath(): string {
+  return path.join(openCodeDataDir(), "auth.json");
+}
+
+function pickKeyFromAuthPayload(payload: unknown, providerId: string): string | undefined {
+  if (!isObjectRecord(payload)) return undefined;
+  const authRecord = payload[providerId];
+  if (!isObjectRecord(authRecord)) return undefined;
+  return typeof authRecord.key === "string" && authRecord.key ? authRecord.key : undefined;
+}
+
+async function readProviderApiKeyFromOpenCodeAuth(providerId: string): Promise<string | undefined> {
+  const envAuthContent = process.env.OPENCODE_AUTH_CONTENT;
+  if (typeof envAuthContent === "string" && envAuthContent.trim()) {
+    try {
+      const parsed = JSON.parse(envAuthContent) as unknown;
+      const key = pickKeyFromAuthPayload(parsed, providerId);
+      if (key) return key;
+    } catch {
+      // ignore malformed override env
+    }
+  }
+
+  try {
+    const raw = await readFile(openCodeAuthPath(), "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    return pickKeyFromAuthPayload(parsed, providerId);
+  } catch {
+    return undefined;
+  }
+}
+
 async function readProviderFromOpenCodeConfig(providerId: string): Promise<ProviderConfig | undefined> {
   const file = openCodeConfigPath();
   try {
@@ -1137,10 +1191,13 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
         const normalizedExcludePrefixes = runtimeFilteringOpts.excludePrefixes?.map((p) => p.toLowerCase());
         const enrichmentEnabled = runtimeEnrichmentOpts.enabled !== false;
 
-        // API key: env var → config key
+        // API key priority: env var → opencode auth store → config key
+        const authStoreApiKey = await readProviderApiKeyFromOpenCodeAuth(providerId);
         const apiKey =
           (typeof process.env[apiKeyEnvName] === "string" && process.env[apiKeyEnvName])
             ? process.env[apiKeyEnvName]
+            : authStoreApiKey
+              ? authStoreApiKey
             : (typeof rawProviderCfg.key === "string" && rawProviderCfg.key)
               ? rawProviderCfg.key
               : "";
