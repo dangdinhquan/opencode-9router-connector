@@ -1205,6 +1205,12 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
           authStoreApiKey,
           typeof rawProviderCfg.key === "string" ? rawProviderCfg.key : undefined
         );
+        if (!apiKey) {
+          process.stderr.write(
+            `[opencode-9router-plugin] config hook: no API key found for provider=${providerId}; skipping model injection\n`
+          );
+          return;
+        }
 
         // API URL from provider config
         const rawApiURL = typeof rawProviderCfg.api === "string" ? rawProviderCfg.api : undefined;
