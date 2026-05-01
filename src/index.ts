@@ -628,6 +628,36 @@ function toOpenCodeModel(
   };
 }
 
+/**
+ * Convert an OpenCodeModel (ModelV2 format) to the legacy config-model format
+ * that opencode's "extend database from config" loop understands.
+ *
+ * This is used by the `config` hook to inject dynamically discovered models
+ * into `cfg.provider[id].models` so they are available even in opencode >=
+ * 1.14.31 where the `provider.models` hook is called before config providers
+ * are processed and therefore only fires for providers already present in the
+ * models.dev database (i.e. not for custom gateways like 9router).
+ */
+function toConfigModelEntry(m: OpenCodeModel): Record<string, unknown> {
+  const entry: Record<string, unknown> = {
+    id: m.id,
+    name: m.name,
+    temperature: m.capabilities.temperature,
+    reasoning: m.capabilities.reasoning,
+    attachment: m.capabilities.attachment,
+    tool_call: m.capabilities.toolcall,
+    limit: {
+      context: m.limit.context,
+      output: m.limit.output,
+      ...(m.limit.input !== undefined ? { input: m.limit.input } : {})
+    },
+    status: m.status
+  };
+  if (m.family) entry.family = m.family;
+  if (m.release_date) entry.release_date = m.release_date;
+  return entry;
+}
+
 function regexPass(regex: RegExp | undefined, value: string): boolean {
   if (!regex) {
     return true;
@@ -1046,6 +1076,143 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
 
   return async (_input: PluginInput): Promise<Hooks> => {
     return {
+      /**
+       * config hook – runs during plugin.list() BEFORE provider.models hook and
+       * BEFORE the "extend database from config" loop in opencode >=1.14.31.
+       *
+       * opencode >=1.14.31 moved the provider.models hook call to run against
+       * `database` (built from models.dev) before the config-providers loop.
+       * Custom providers like 9router are not in models.dev, so their
+       * provider.models hook is silently skipped.  By injecting dynamically
+       * discovered models into cfg.provider[id].models here (in legacy config
+       * format), we guarantee they are processed by the config-providers loop
+       * and made available regardless of opencode version.
+       *
+       * For opencode <=1.14.30 the provider.models hook still fires afterwards
+       * and overwrites with the same dynamic set, so there is no regression.
+       */
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      config: async (cfg: any): Promise<void> => {
+        if (!isObjectRecord(cfg?.provider)) return;
+        const rawProviderCfg = cfg.provider[providerId];
+        if (!isObjectRecord(rawProviderCfg)) return;
+
+        const providerOptions = isObjectRecord(rawProviderCfg.options) ? rawProviderCfg.options : undefined;
+        const providerEnrichment = isObjectRecord(providerOptions?.modelEnrichment)
+          ? providerOptions.modelEnrichment
+          : undefined;
+        const providerFiltering = isObjectRecord(providerOptions?.modelFiltering)
+          ? providerOptions.modelFiltering
+          : undefined;
+        const timeoutMs = toStrictlyPositiveNumber(providerEnrichment?.timeoutMs);
+        const cacheTtlMs = toStrictlyPositiveNumber(providerEnrichment?.cacheTtlMs);
+        const defaultContextWindow = toStrictlyPositiveNumber(providerEnrichment?.defaultContextWindow);
+        const defaultMaxOutputTokens = toStrictlyPositiveNumber(providerEnrichment?.defaultMaxOutputTokens);
+
+        const runtimeEnrichmentOpts = {
+          ...configuredEnrichmentOpts,
+          ...(typeof providerEnrichment?.enabled === "boolean" ? { enabled: providerEnrichment.enabled } : {}),
+          ...(typeof providerEnrichment?.catalogURL === "string" && providerEnrichment.catalogURL.trim()
+            ? { catalogURL: providerEnrichment.catalogURL }
+            : {}),
+          ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+          ...(cacheTtlMs !== undefined ? { cacheTtlMs } : {}),
+          ...(typeof providerEnrichment?.overrideUpstream === "boolean"
+            ? { overrideUpstream: providerEnrichment.overrideUpstream }
+            : {}),
+          ...(defaultContextWindow !== undefined ? { defaultContextWindow } : {}),
+          ...(defaultMaxOutputTokens !== undefined ? { defaultMaxOutputTokens } : {})
+        };
+        const runtimeProviderAliases = mergeProviderAliasRecords(
+          configuredProviderAliases,
+          toProviderAliasRecord(providerEnrichment?.providerAliases)
+        );
+        const runtimeFilteringOpts = {
+          includePrefixes: toStringArray(providerFiltering?.includePrefixes) ?? configuredFilteringOpts.includePrefixes,
+          excludePrefixes: toStringArray(providerFiltering?.excludePrefixes) ?? configuredFilteringOpts.excludePrefixes,
+          includeModelIdRegex: toRegex(providerFiltering?.includeModelIdRegex) ?? configuredFilteringOpts.includeModelIdRegex,
+          excludeModelIdRegex: toRegex(providerFiltering?.excludeModelIdRegex) ?? configuredFilteringOpts.excludeModelIdRegex
+        };
+        const normalizedIncludePrefixes = runtimeFilteringOpts.includePrefixes?.map((p) => p.toLowerCase());
+        const normalizedExcludePrefixes = runtimeFilteringOpts.excludePrefixes?.map((p) => p.toLowerCase());
+        const enrichmentEnabled = runtimeEnrichmentOpts.enabled !== false;
+
+        // API key: env var → config key
+        const apiKey =
+          (typeof process.env[apiKeyEnvName] === "string" && process.env[apiKeyEnvName])
+            ? process.env[apiKeyEnvName]
+            : (typeof rawProviderCfg.key === "string" && rawProviderCfg.key)
+              ? rawProviderCfg.key
+              : "";
+
+        // API URL from provider config
+        const rawApiURL = typeof rawProviderCfg.api === "string" ? rawProviderCfg.api : undefined;
+        if (!rawApiURL) return;
+        const apiURL = normalizeApiURLInput(rawApiURL);
+        if (validateApiURL(apiURL) !== undefined) return;
+
+        const modelsDevCatalog = enrichmentEnabled
+          ? await fetchModelsDevCatalog(
+            runtimeEnrichmentOpts.catalogURL,
+            runtimeEnrichmentOpts.timeoutMs,
+            runtimeEnrichmentOpts.cacheTtlMs
+          )
+          : undefined;
+        const modelsDevIndex = modelsDevCatalog ? buildModelsDevIndex(modelsDevCatalog) : undefined;
+
+        const upstreamModels = await fetchModels(apiURL, apiKey);
+        if (!upstreamModels) {
+          process.stderr.write(
+            `[opencode-9router-plugin] config hook: fetch failed, skipping model injection\n`
+          );
+          return;
+        }
+
+        process.stderr.write(
+          `[opencode-9router-plugin] config hook: injecting ${upstreamModels.length} upstream model(s) into config\n`
+        );
+
+        const dynamicConfigModels = upstreamModels
+          .filter((model) => {
+            const { modelKey } = splitModelForLookup(model.id, providerId);
+            const includePass = regexPass(runtimeFilteringOpts.includeModelIdRegex, model.id)
+              || regexPass(runtimeFilteringOpts.includeModelIdRegex, modelKey);
+            const excludePass = !runtimeFilteringOpts.excludeModelIdRegex
+              || (!regexPass(runtimeFilteringOpts.excludeModelIdRegex, model.id)
+                && !regexPass(runtimeFilteringOpts.excludeModelIdRegex, modelKey));
+            return includePass
+              && excludePass
+              && prefixPass(normalizedIncludePrefixes, model.id, providerId)
+              && prefixExcludePass(normalizedExcludePrefixes, model.id, providerId);
+          })
+          .reduce<Record<string, unknown>>((acc, model) => {
+            const enriched = findEnrichedModel(model.id, providerId, modelsDevIndex, runtimeProviderAliases);
+            const built = toOpenCodeModel(
+              model,
+              providerId,
+              apiURL,
+              runtimeEnrichmentOpts.defaultContextWindow,
+              runtimeEnrichmentOpts.defaultMaxOutputTokens,
+              enriched,
+              apiKey,
+              runtimeEnrichmentOpts.overrideUpstream
+            );
+            acc[model.id] = toConfigModelEntry(built);
+            return acc;
+          }, {});
+
+        // Static models configured by the user take priority over dynamic ones.
+        const existingModels = isObjectRecord(rawProviderCfg.models) ? rawProviderCfg.models : {};
+        cfg.provider[providerId] = {
+          ...rawProviderCfg,
+          models: { ...dynamicConfigModels, ...existingModels }
+        };
+
+        process.stderr.write(
+          `[opencode-9router-plugin] config hook: injected ${Object.keys(dynamicConfigModels).length} dynamic model(s)\n`
+        );
+      },
+
       provider: {
         id: providerId,
         models: async (
