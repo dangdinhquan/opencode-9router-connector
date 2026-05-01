@@ -781,7 +781,7 @@ async function readProviderApiKeyFromOpenCodeAuth(providerId: string): Promise<s
       const key = pickKeyFromAuthPayload(parsed, providerId);
       if (key) return key;
     } catch {
-      // ignore malformed override env
+      // Ignore invalid JSON inside OPENCODE_AUTH_CONTENT and fall back to file.
     }
   }
 
@@ -1224,7 +1224,7 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
         const upstreamModels = await fetchModels(apiURL, apiKey);
         if (!upstreamModels) {
           process.stderr.write(
-            `[opencode-9router-plugin] config hook: fetch failed, skipping model injection\n`
+            `[opencode-9router-plugin] config hook: fetch failed for provider=${providerId} url=${apiURL}; skipping model injection\n`
           );
           return;
         }
