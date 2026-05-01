@@ -908,6 +908,13 @@ function pickApiKey(
   return "";
 }
 
+function firstNonEmptyString(...values: Array<string | undefined>): string {
+  for (const value of values) {
+    if (typeof value === "string" && value) return value;
+  }
+  return "";
+}
+
 function pickApiURL(
   provider: ProviderConfig | undefined,
   configProvider: ProviderConfig | undefined
@@ -1193,14 +1200,11 @@ export function createOpenAICompatibleModelsPlugin(options: RouterPluginOptions 
 
         // API key priority: env var → opencode auth store → config key
         const authStoreApiKey = await readProviderApiKeyFromOpenCodeAuth(providerId);
-        const apiKey =
-          (typeof process.env[apiKeyEnvName] === "string" && process.env[apiKeyEnvName])
-            ? process.env[apiKeyEnvName]
-            : authStoreApiKey
-              ? authStoreApiKey
-            : (typeof rawProviderCfg.key === "string" && rawProviderCfg.key)
-              ? rawProviderCfg.key
-              : "";
+        const apiKey = firstNonEmptyString(
+          typeof process.env[apiKeyEnvName] === "string" ? process.env[apiKeyEnvName] : undefined,
+          authStoreApiKey,
+          typeof rawProviderCfg.key === "string" ? rawProviderCfg.key : undefined
+        );
 
         // API URL from provider config
         const rawApiURL = typeof rawProviderCfg.api === "string" ? rawProviderCfg.api : undefined;
