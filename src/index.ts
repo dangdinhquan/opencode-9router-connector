@@ -741,29 +741,53 @@ function openCodeConfigPath(): string {
 }
 
 /**
- * Resolve opencode data dir (where auth.json is stored).
- * Mirrors opencode's xdgData-based behavior:
- *  - Linux / other: $XDG_DATA_HOME/opencode (fallback ~/.local/share/opencode)
- *  - macOS:         ~/Library/Application Support/opencode
- *  - Windows:       %APPDATA%\\opencode
+ * Resolve candidate locations for opencode's auth.json, tried in order.
+ *
+ * opencode itself uses XDG-style paths on all platforms (it is a Bun-based
+ * CLI), so on macOS it writes to ~/.local/share/opencode/auth.json rather
+ * than ~/Library/Application Support/opencode/auth.json. We check the XDG
+ * path first to match opencode's actual behavior, then fall back to the
+ * platform-native location for compatibility with any user who might still
+ * keep credentials there.
+ *
+ * Order:
+ *  1. $XDG_DATA_HOME/opencode/auth.json   (if set, all platforms)
+ *  2. ~/.local/share/opencode/auth.json   (opencode's default, all platforms)
+ *  3. Platform-native fallback:
+ *       - macOS:   ~/Library/Application Support/opencode/auth.json
+ *       - Windows: %APPDATA%\opencode\auth.json (and ~/AppData/Roaming/...)
  */
-function openCodeDataDir(): string {
+function openCodeAuthPathCandidates(): string[] {
   const home = os.homedir();
-  if (process.platform === "darwin") {
-    return path.join(home, "Library", "Application Support", "opencode");
-  }
-  if (process.platform === "win32") {
-    const appData = process.env.APPDATA;
-    if (appData) return path.join(appData, "opencode");
-    return path.join(home, "AppData", "Roaming", "opencode");
-  }
+  const candidates: string[] = [];
+
   const xdg = process.env.XDG_DATA_HOME;
-  const dataBase = xdg && path.isAbsolute(xdg) ? xdg : path.join(home, ".local", "share");
-  return path.join(dataBase, "opencode");
+  if (xdg && path.isAbsolute(xdg)) {
+    candidates.push(path.join(xdg, "opencode", "auth.json"));
+  }
+
+  candidates.push(path.join(home, ".local", "share", "opencode", "auth.json"));
+
+  if (process.platform === "darwin") {
+    candidates.push(path.join(home, "Library", "Application Support", "opencode", "auth.json"));
+  } else if (process.platform === "win32") {
+    const appData = process.env.APPDATA;
+    if (appData) {
+      candidates.push(path.join(appData, "opencode", "auth.json"));
+    }
+    candidates.push(path.join(home, "AppData", "Roaming", "opencode", "auth.json"));
+  }
+
+  // Dedupe while preserving order.
+  return Array.from(new Set(candidates));
 }
 
+/**
+ * Backwards-compatible single-path accessor. Returns the highest-priority
+ * candidate so existing callers get a reasonable default.
+ */
 function openCodeAuthPath(): string {
-  return path.join(openCodeDataDir(), "auth.json");
+  return openCodeAuthPathCandidates()[0];
 }
 
 function pickKeyFromAuthPayload(payload: unknown, providerId: string): string | undefined {
@@ -785,13 +809,18 @@ async function readProviderApiKeyFromOpenCodeAuth(providerId: string): Promise<s
     }
   }
 
-  try {
-    const raw = await readFile(openCodeAuthPath(), "utf8");
-    const parsed = JSON.parse(raw) as unknown;
-    return pickKeyFromAuthPayload(parsed, providerId);
-  } catch {
-    return undefined;
+  for (const candidate of openCodeAuthPathCandidates()) {
+    try {
+      const raw = await readFile(candidate, "utf8");
+      const parsed = JSON.parse(raw) as unknown;
+      const key = pickKeyFromAuthPayload(parsed, providerId);
+      if (key) return key;
+    } catch {
+      // Try next candidate.
+    }
   }
+
+  return undefined;
 }
 
 async function readProviderFromOpenCodeConfig(providerId: string): Promise<ProviderConfig | undefined> {
